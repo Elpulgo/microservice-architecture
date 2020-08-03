@@ -1,0 +1,30 @@
+@using System.Threading
+@inject WebSocketService m_WebSocketService
+@implements IDisposable
+
+<div>
+    <h1>Result of roundtrip</h1>
+    <span>Received message:</span>
+    <span>@Message</span>
+</div>
+
+@code{
+    public string Message;
+    private CancellationTokenSource m_DisposalTokenSource = new CancellationTokenSource();
+    protected override async Task OnInitializedAsync()
+    {
+        var connection = m_WebSocketService.ConnectAsync(m_DisposalTokenSource.Token);
+
+        await foreach (var message in connection)
+        {
+            Message = message;
+            StateHasChanged();
+        }
+    }
+
+    public async void Dispose()
+    {
+        m_DisposalTokenSource.Cancel();
+        await m_WebSocketService.CloseConnectionAsync();
+    }
+}
