@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 
 namespace client
 {
@@ -16,15 +17,14 @@ namespace client
         private readonly ClientWebSocket m_Websocket;
         private readonly Uri m_WebsocketUri;
 
-        public WebSocketService()
+        public IConfiguration Configuration { get; }
+
+        public WebSocketService(IConfiguration configuration)
         {
+            var url = configuration["WebSocketUrl"];
+            Configuration = configuration;
             m_Websocket = new ClientWebSocket();
-#if DEBUG
-            var webSocketUrl = "ws://127.0.0.1:8080/ws";
-#else
-            var webSocketUrl = Environment.GetEnvironmentVariable("WEBSOCKET-URL");
-#endif
-            m_WebsocketUri = new Uri(webSocketUrl);
+            m_WebsocketUri = new Uri(url);
         }
 
         /// <summary>

@@ -14,7 +14,6 @@ namespace client
             builder.RootComponents.Add<App>("app");
 
             builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
-            Console.WriteLine("Address: " + builder.Configuration.GetSection("ASPNETCORE_WEBSOCKET-URL"));
             builder.Services.AddSingleton<WebSocketService>();
             await builder.Build().RunAsync();
         }
