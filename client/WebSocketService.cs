@@ -18,7 +18,11 @@ namespace client
         public WebSocketService()
         {
             m_Websocket = new ClientWebSocket();
+#if DEBUG
+            var webSocketUrl = "wss://webapi:443";
+#else
             var webSocketUrl = Environment.GetEnvironmentVariable("WEBSOCKET-URL");
+#endif
             m_WebsocketUri = new Uri(webSocketUrl);
         }
 
