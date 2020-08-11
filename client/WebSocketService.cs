@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -33,7 +34,23 @@ namespace client
         public async IAsyncEnumerable<string> ConnectAsync(
             [EnumeratorCancellation] CancellationToken cancellationToken)
         {
-            await m_Websocket.ConnectAsync(m_WebsocketUri, cancellationToken);
+            var failedConnectMessage = string.Empty;
+
+            try
+            {
+                await m_Websocket.ConnectAsync(m_WebsocketUri, cancellationToken);
+            }
+            catch (Exception exception)
+            {
+                Console.WriteLine($"Failed to connect to websocket: '{exception.Message}'");
+                failedConnectMessage = $"Failed to connect to websocket '{exception.Message}'";
+            }
+
+            if (!string.IsNullOrEmpty(failedConnectMessage))
+            {
+                yield return failedConnectMessage;
+                yield break;
+            }
 
             var buffer = new ArraySegment<byte>(new byte[BufferSize]);
 
