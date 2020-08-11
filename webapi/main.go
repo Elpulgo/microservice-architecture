@@ -21,10 +21,19 @@ func main() {
 		serveWs(hub, w, r)
 	})
 
+	http.HandleFunc("/api/hello", func(w http.ResponseWriter, r *http.Request) {
+		enableCors(&w)
+		log.Println("Got a request from HTTP!: ", r.Body)
+	})
+
 	log.Println("Web api started, listening on ws://127.0.0.1:8080")
 
 	err := http.ListenAndServe(*addr, nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
+}
+
+func enableCors(w *http.ResponseWriter) {
+	(*w).Header().Set("Access-Control-Allow-Origin", "*")
 }
