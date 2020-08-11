@@ -1,6 +1,12 @@
+@inject HttpService HttpService
+
 
 <h1>Send a key to execute a roundtrip</h1>
+<button @onclick="@SendKey">Send key</button>
 
 @code{
-            
+    public async Task SendKey()
+    {
+        await HttpService.PostAsync();
+    }
 }

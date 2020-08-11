@@ -13,8 +13,10 @@ namespace client
             var builder = WebAssemblyHostBuilder.CreateDefault(args);
             builder.RootComponents.Add<App>("app");
 
-            builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
+            var httpBaseAddress = builder.Configuration["RestUrl"];
+            builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(httpBaseAddress) });
             builder.Services.AddSingleton<WebSocketService>();
+            builder.Services.AddScoped<HttpService>();
             await builder.Build().RunAsync();
         }
     }
