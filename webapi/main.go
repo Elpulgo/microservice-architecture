@@ -5,6 +5,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"log"
 	"net/http"
@@ -23,7 +24,12 @@ func main() {
 
 	http.HandleFunc("/api/hello", func(w http.ResponseWriter, r *http.Request) {
 		enableCors(&w)
-		log.Println("Got a request from HTTP!: ", r.Body)
+		var value postModel
+		if err := json.NewDecoder(r.Body).Decode(&value); err != nil {
+			log.Println("Failed to decode value from HTTP Request!")
+		}
+
+		log.Println("Got a request from HTTP!: ", value.Body)
 	})
 
 	log.Println("Web api started, listening on ws://127.0.0.1:8080")
@@ -35,5 +41,13 @@ func main() {
 }
 
 func enableCors(w *http.ResponseWriter) {
-	(*w).Header().Set("Access-Control-Allow-Origin", "*")
+	(*w).Header().Add("Connection", "keep-alive")
+	(*w).Header().Add("Access-Control-Allow-Methods", "POST, OPTIONS, GET, DELETE, PUT")
+	(*w).Header().Add("Access-Control-Max-Age", "86400")
+	(*w).Header().Set("Access-Control-Allow-Origin", "http://localhost:5000")
+	(*w).Header().Set("Access-Control-Allow-Headers", "Content-Type")
+}
+
+type postModel struct {
+	Body string
 }
