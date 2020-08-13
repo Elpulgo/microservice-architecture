@@ -11,7 +11,7 @@ import (
 	"net/http"
 )
 
-var addr = flag.String("addr", "127.0.0.1:8080", "http service address")
+var addr = flag.String("addr", ":8080", "http service address")
 
 func main() {
 	flag.Parse()
@@ -32,7 +32,7 @@ func main() {
 		log.Println("Got a request from HTTP!: ", value.Body)
 	})
 
-	log.Println("Web api started, listening on ws://127.0.0.1:8080")
+	log.Println("Web api started, listening on ws://localhost:8080")
 
 	err := http.ListenAndServe(*addr, nil)
 	if err != nil {
