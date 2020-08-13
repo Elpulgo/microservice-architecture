@@ -5,12 +5,14 @@
 package main
 
 import (
+	"github.com/streadway/amqp"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"webapi/mqtt"
 )
 
 var addr = flag.String("addr", ":8080", "http service address")
@@ -20,6 +22,9 @@ func main() {
 	hub := newHub()
 	go hub.run()
 
+	testMqtt()
+
+	
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		serveWs(hub, w, r)
 	})
@@ -66,4 +71,26 @@ func (model *postModel) convertToByteArray() []byte {
 	}
 
 	return byteArray
+}
+
+
+func testMqtt(){
+	channel := mqtt.Setup("events")
+	mqttQueueModel := mqtt.QueueModel{
+		Channel: channel,
+		Exchange: "events",
+		QueueName: "eventQueue",
+	}
+
+	mqtt.SetupQueue(mqttQueueModel)
+
+	mqttPublishModel := mqtt.PublishModel{
+		Channel: channel,
+		Exchange: "events",
+		Message: amqp.Publishing{
+			Body: []byte("Hello World"),
+		},
+	}
+
+	mqtt.Publish(mqttPublishModel)
 }
