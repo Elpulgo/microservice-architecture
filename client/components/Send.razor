@@ -1,12 +1,22 @@
 @inject HttpService HttpService
 
 
-<h1>Send a key to execute a roundtrip</h1>
-<button @onclick="@SendKey">Send key</button>
+<h1>Send a key value pair to execute a roundtrip</h1>
+<label>Key</label>
+<input @bind="@Key" />
+
+<label>Value</label>
+<input @bind="@Value" />
+
+<button @onclick="@SendKey">Send key value pair</button>
 
 @code{
+    private string Key { get; set; }
+    private string Value { get; set; }
+
     public async Task SendKey()
     {
-        await HttpService.PostAsync();
+        var model = new PostModel(Key, Value);
+        await HttpService.PostAsync(model);
     }
 }

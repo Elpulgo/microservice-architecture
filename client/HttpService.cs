@@ -15,18 +15,10 @@ namespace client
             m_HttpClient = httpClient;
         }
 
-        public async Task PostAsync()
+        public async Task PostAsync(PostModel model)
         {
-            var model = new PostModel() { Body = "Hellow from WASM" };
             var result =  await m_HttpClient.PostAsJsonAsync("api/hello", model);
             result.EnsureSuccessStatusCode();
         }
-
-
-    }
-
-    internal class PostModel
-    {
-        public string Body { get; set; }
     }
 }

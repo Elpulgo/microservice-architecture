@@ -34,9 +34,6 @@ func (h *Hub) run() {
 		select {
 		case client := <-h.register:
 			h.clients[client] = true
-			for client := range h.clients {
-				client.send <- []byte(`Hello from web api!`)
-			}
 		case client := <-h.unregister:
 			if _, ok := h.clients[client]; ok {
 				delete(h.clients, client)
