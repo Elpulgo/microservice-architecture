@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
+using System.Text.Json;
 
 namespace client
 {
@@ -27,12 +28,8 @@ namespace client
             m_WebsocketUri = new Uri(url);
         }
 
-        /// <summary>
-        /// Connect to the websocket and begin yielding messages
-        /// received from the connection.
-        /// </summary>
-        public async IAsyncEnumerable<string> ConnectAsync(
-            [EnumeratorCancellation] CancellationToken cancellationToken)
+
+        public async Task<string> ConnectAsync(CancellationToken cancellationToken)
         {
             var failedConnectMessage = string.Empty;
 
@@ -46,12 +43,12 @@ namespace client
                 failedConnectMessage = $"Failed to connect to websocket '{exception.Message}'";
             }
 
-            if (!string.IsNullOrEmpty(failedConnectMessage))
-            {
-                yield return failedConnectMessage;
-                yield break;
-            }
+            return failedConnectMessage;
+        }
 
+        public async IAsyncEnumerable<PostModel> ConsumeAsync(
+            [EnumeratorCancellation] CancellationToken cancellationToken)
+        {
             var buffer = new ArraySegment<byte>(new byte[BufferSize]);
 
             while (!cancellationToken.IsCancellationRequested)
@@ -68,12 +65,12 @@ namespace client
 
                 } while (!result.EndOfMessage);
 
-                memoryStream.Seek(0, SeekOrigin.Begin);
-
-                yield return Encoding.UTF8.GetString(memoryStream.ToArray());
-
                 if (result.MessageType == WebSocketMessageType.Close)
                     break;
+
+                memoryStream.Seek(0, SeekOrigin.Begin);
+
+                yield return JsonSerializer.Deserialize<PostModel>(Encoding.UTF8.GetString(memoryStream.ToArray()));
             }
         }
 

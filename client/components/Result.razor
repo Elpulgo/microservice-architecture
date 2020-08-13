@@ -3,21 +3,30 @@
 @implements IDisposable
 
 <div>
-    <h1>Result of roundtrip</h1>
-    <span>Received message:</span>
-    <span>@Message</span>
+    @if(!string.IsNullOrEmpty(ErrorMessageConnect)){
+        <div>Failed to connect to Websocket: @ErrorMessageConnect</div>
+    }else{
+        <h1>Broadcasted from Web Api</h1>
+        <span>Key: @Model?.Key</span>
+        <span>Value: @Model?.Value</span>
+    }
 </div>
 
 @code{
-    public string Message;
+    public string ErrorMessageConnect = string.Empty;
+    public PostModel Model;
     private CancellationTokenSource m_DisposalTokenSource = new CancellationTokenSource();
     protected override async Task OnInitializedAsync()
     {
-        var connection = m_WebSocketService.ConnectAsync(m_DisposalTokenSource.Token);
+        var errorMessage = await m_WebSocketService.ConnectAsync(m_DisposalTokenSource.Token);
+        ErrorMessageConnect = errorMessage;
 
-        await foreach (var message in connection)
+        if (!string.IsNullOrEmpty(errorMessage))
+            return;
+
+        await foreach (var message in m_WebSocketService.ConsumeAsync(m_DisposalTokenSource.Token))
         {
-            Message = message;
+            Model = message;
             StateHasChanged();
         }
     }
