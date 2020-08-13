@@ -1,0 +1,62 @@
+version: '3.5'
+services:
+  redis:
+    image: "redis:alpine"
+    container_name: redis
+
+  mqtt:
+    image: "rabbitmq:alpine"  
+    container_name: mqtt
+    environment: 
+      RABBITMQ_ERLANG_COOKIE: ${RABBITMQ_ERLANG_COOKIE}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    ports:
+      - 5672:5672
+      - 15672:15672
+
+  service:
+    restart: always
+    privileged: true
+    container_name: service
+    ports:      
+      - "5000:5000"
+    networks:
+      - microservice
+    build:
+      context: ./service
+      dockerfile: Dockerfile
+    depends_on:
+      - redis
+      - mqtt
+
+  webapi:
+    restart: always
+    privileged: true
+    container_name: webapi
+    ports:      
+      - "5000:5000"
+    networks:
+      - microservice
+    build:
+      context: ./webapi
+      dockerfile: Dockerfile
+    depends_on:
+      - redis
+      - service
+      - mqtt
+
+  client:
+    restart: always
+    privileged: true
+    container_name: client
+    ports:      
+      - "5000:5000"
+    networks:
+      - microservice
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+  
+networks:
+  microservice:
