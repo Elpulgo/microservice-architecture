@@ -1,6 +1,4 @@
 FROM mcr.microsoft.com/dotnet/core/sdk:3.1-buster AS build
-ENV WebSocketUrl "ws://localhost:8080/ws"
-ENV RestUrl "http://localhost:8080"
 
 WORKDIR /src
 COPY client.csproj .

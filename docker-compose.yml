@@ -3,16 +3,30 @@ services:
   webservice:
     restart: always
     privileged: true
-    container_name: webapi
+    container_name: webservice
     ports:      
       - "8080:8080"
     networks:
       - microservice
     build:
-      context: ./webapi
+      context: ./webservice
       dockerfile: Dockerfile
     environment:
       - AMQP_URL=amqp://guest:guest@mqtt:5672
+    depends_on: 
+      - mqtt
+
+  websocketservice:
+    restart: always
+    privileged: true
+    container_name: websocketservice
+    ports:      
+      - "8010:8010"
+    networks:
+      - microservice
+    build:
+      context: ./websocketservice
+      dockerfile: Dockerfile
     depends_on: 
       - mqtt
 
