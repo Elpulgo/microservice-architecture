@@ -33,7 +33,7 @@ func dial() *amqp.Connection {
 		connection, err := amqp.Dial(url)
 
 		if err != nil{
-			fmt.Println("Failed to establish connection with RabbitMQ, retry nr ", retries)
+			fmt.Printf("Failed to establish connection with RabbitMQ, retry nr %d / %d \n", retries, maxRetries)
 			retries++
 			time.Sleep(1 * time.Second)
 			continue
@@ -42,7 +42,7 @@ func dial() *amqp.Connection {
 		return connection
 	}
 
-	return nil
+	panic("Failed to establish connection to RabbitMQ! Will exit")
 }
 
 func createChannel(conn *amqp.Connection) *amqp.Channel {
