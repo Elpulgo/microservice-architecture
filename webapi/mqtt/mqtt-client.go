@@ -1,6 +1,8 @@
 package mqtt
 
 import (
+	"time"
+	"fmt"
 	"os"
 
 	"github.com/streadway/amqp"
@@ -18,20 +20,29 @@ func dial() *amqp.Connection {
 	url := os.Getenv("AMQP_URL")
 
 	//If it doesn't exist, use the default connection string.
-
 	if url == "" {
 		//Don't do this in production, this is for testing purposes only.
 		url = "amqp://guest:guest@localhost:5672"
 	}
 
-	// Connect to the rabbitMQ instance
-	connection, err := amqp.Dial(url)
+	maxRetries := 20
+	retries := 0
 
-	if err != nil {
-		panic("could not establish connection with RabbitMQ:" + err.Error())
+	for retries < maxRetries{		
+		// Connect to the rabbitMQ instance
+		connection, err := amqp.Dial(url)
+
+		if err != nil{
+			fmt.Println("Failed to establish connection with RabbitMQ, retry nr ", retries)
+			retries++
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		return connection
 	}
 
-	return connection
+	return nil
 }
 
 func createChannel(conn *amqp.Connection) *amqp.Channel {
