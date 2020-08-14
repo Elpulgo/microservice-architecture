@@ -16,28 +16,30 @@ import (
 )
 
 var addr = flag.String("addr", ":8080", "http service address")
+var channel *amqp.Channel
 
 func main() {
 	flag.Parse()
 	hub := newHub()
-	go hub.run()
+	go hub.run()	
 
-	testMqtt()
-
+	channel := mqtt.Setup("events")
 	
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		serveWs(hub, w, r)
 	})
-
+	
 	http.HandleFunc("/api/hello", func(w http.ResponseWriter, r *http.Request) {
 		enableCors(&w)
 		var model postModel
 		if err := json.NewDecoder(r.Body).Decode(&model); err != nil {
 			log.Println("Failed to decode value from HTTP Request!")
 		}
-
+		
 		log.Printf("Got a request from HTTP:, Key: '%s', Value: '%s', will invoke WebSocket!", model.Key, model.Value)
 		hub.broadcast <- model.convertToByteArray()
+		
+		publishMqtt(channel)
 	})
 
 	log.Println("Web api started, listening on ws://localhost:8080 & http://localhost:8080")
@@ -74,8 +76,7 @@ func (model *postModel) convertToByteArray() []byte {
 }
 
 
-func testMqtt(){
-	channel := mqtt.Setup("events")
+func publishMqtt(channel *amqp.Channel){
 	mqttQueueModel := mqtt.QueueModel{
 		Channel: channel,
 		Exchange: "events",
@@ -93,4 +94,5 @@ func testMqtt(){
 	}
 
 	mqtt.Publish(mqttPublishModel)
+	fmt.Println("Successfully published message")
 }

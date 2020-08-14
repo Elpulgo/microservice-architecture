@@ -11,10 +11,14 @@ services:
     build:
       context: ./webapi
       dockerfile: Dockerfile
+    environment:
+      - AMQP_URL=amqp://guest:guest@mqtt:5672
+    depends_on: 
+      - mqtt
 
   client:
     restart: always
-    privileged: true
+    privileged: true  
     container_name: client
     ports:      
       - "5000:80"
@@ -23,6 +27,17 @@ services:
     build:
       context: ./client
       dockerfile: Dockerfile
+    depends_on: 
+      - webapi
+
+  mqtt:
+    image: "rabbitmq:alpine"  
+    container_name: mqtt
+    networks:
+      - microservice
+    ports:
+      - 5672:5672
+      - 15672:15672
   
 networks:
   microservice:
