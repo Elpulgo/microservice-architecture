@@ -1,14 +1,15 @@
 package mqtt
 
 import (
-	"time"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/streadway/amqp"
 )
+
 // Setup dial the RabbitMq instance, create a channel and bind an exchange to the channel
-func Setup(exchangeName string) *amqp.Channel{
+func Setup(exchangeName string) *amqp.Channel {
 	connection := dial()
 	channel := createChannel(connection)
 	createExchange(channel, exchangeName)
@@ -28,11 +29,11 @@ func dial() *amqp.Connection {
 	maxRetries := 20
 	retries := 0
 
-	for retries < maxRetries{		
+	for retries < maxRetries {
 		// Connect to the rabbitMQ instance
 		connection, err := amqp.Dial(url)
 
-		if err != nil{
+		if err != nil {
 			fmt.Printf("Failed to establish connection with RabbitMQ, retry nr %d / %d \n", retries, maxRetries)
 			retries++
 			time.Sleep(1 * time.Second)
@@ -68,7 +69,7 @@ func createExchange(channel *amqp.Channel, exchangeName string) {
 // SetupQueue set up a queue and bind it to an exchange
 func SetupQueue(queueModel QueueModel) {
 	// We create a queue
-	var _, err = queueModel.Channel.QueueDeclare(queueModel.QueueName, true, false, false, false, nil)
+	var _, err = queueModel.Channel.QueueDeclare(queueModel.QueueName, false, false, false, false, nil)
 
 	if err != nil {
 		panic("error declaring the queue: " + err.Error())
@@ -82,7 +83,7 @@ func SetupQueue(queueModel QueueModel) {
 	}
 }
 
-// Publish will publish a message to an exchange 
+// Publish will publish a message to an exchange
 func Publish(publishModel PublishModel) {
 	// We publish the message to the exchange we created earlier
 	err := publishModel.Channel.Publish(publishModel.Exchange, "", false, false, publishModel.Message)
