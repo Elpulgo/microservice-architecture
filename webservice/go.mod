@@ -1,4 +1,4 @@
-module webapi
+module webservice
 
 go 1.14
 
