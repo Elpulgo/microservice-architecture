@@ -20,14 +20,14 @@ var channel *amqp.Channel
 
 func main() {
 	flag.Parse()
-	hub := newHub()
-	go hub.run()	
+	// hub := newHub()
+	// go hub.run()	
 
 	channel := mqtt.Setup("events")
 	
-	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		serveWs(hub, w, r)
-	})
+	// http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+	// 	serveWs(hub, w, r)
+	// })
 	
 	http.HandleFunc("/api/hello", func(w http.ResponseWriter, r *http.Request) {
 		enableCors(&w)
@@ -37,12 +37,12 @@ func main() {
 		}
 		
 		log.Printf("Got a request from HTTP:, Key: '%s', Value: '%s', will invoke WebSocket!", model.Key, model.Value)
-		hub.broadcast <- model.convertToByteArray()
+		// hub.broadcast <- model.convertToByteArray()
 		
 		publishMqtt(channel)
 	})
 
-	log.Println("Web api started, listening on ws://localhost:8080 & http://localhost:8080")
+	log.Println("Web api started, listening on http://localhost:8080")
 
 	err := http.ListenAndServe(*addr, nil)
 	if err != nil {
