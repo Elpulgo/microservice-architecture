@@ -58,7 +58,7 @@ func createChannel(conn *amqp.Connection) *amqp.Channel {
 
 func createExchange(channel *amqp.Channel, exchangeName string) {
 	// We create an exchange that will bind to the queue to send and receive messages
-	err := channel.ExchangeDeclare(exchangeName, "topic", true, false, false, false, nil)
+	err := channel.ExchangeDeclare(exchangeName, "fanout", true, false, false, false, nil)
 
 	if err != nil {
 		panic(err)
@@ -85,7 +85,7 @@ func SetupQueue(queueModel QueueModel) {
 // Publish will publish a message to an exchange 
 func Publish(publishModel PublishModel) {
 	// We publish the message to the exchange we created earlier
-	err := publishModel.Channel.Publish(publishModel.Exchange, "random-key", false, false, publishModel.Message)
+	err := publishModel.Channel.Publish(publishModel.Exchange, "", false, false, publishModel.Message)
 
 	if err != nil {
 		panic("error publishing a message to the queue:" + err.Error())
