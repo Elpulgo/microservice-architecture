@@ -44,6 +44,22 @@ services:
     depends_on: 
       - webservice
 
+  service:
+    restart: always
+    privileged: true
+    container_name: service
+    ports:
+      - "5010-80"
+    networks: 
+      - microservice
+    build:
+      context: ./service
+      dockerfile: Dockerfile
+    environment: 
+      - AMQP_URL=amqp://guest:guest@mqtt:5672
+    depends_on: 
+      - mqtt 
+
   mqtt:
     image: "rabbitmq:alpine"  
     container_name: mqtt

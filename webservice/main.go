@@ -72,7 +72,7 @@ func publishMqtt(channel *amqp.Channel, message postModel){
 	mqttQueueModel := mqtt.QueueModel{
 		Channel: channel,
 		Exchange: "events",
-		QueueName: "eventQueue",
+		QueueName: "events",
 	}
 
 	mqtt.SetupQueue(mqttQueueModel)
