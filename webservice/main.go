@@ -20,14 +20,8 @@ var channel *amqp.Channel
 
 func main() {
 	flag.Parse()
-	// hub := newHub()
-	// go hub.run()	
 
 	channel := mqtt.Setup("events")
-	
-	// http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-	// 	serveWs(hub, w, r)
-	// })
 	
 	http.HandleFunc("/api/hello", func(w http.ResponseWriter, r *http.Request) {
 		enableCors(&w)
@@ -36,13 +30,11 @@ func main() {
 			log.Println("Failed to decode value from HTTP Request!")
 		}
 		
-		log.Printf("Got a request from HTTP:, Key: '%s', Value: '%s', will invoke WebSocket!", model.Key, model.Value)
-		// hub.broadcast <- model.convertToByteArray()
-		
-		publishMqtt(channel)
+		log.Printf("Got a request from HTTP:, Key: '%s', Value: '%s', will publish to MQTT broker!", model.Key, model.Value)
+		publishMqtt(channel, model)
 	})
 
-	log.Println("Web api started, listening on http://localhost:8080")
+	log.Println("Webservice started, listening on http://localhost:8080")
 
 	err := http.ListenAndServe(*addr, nil)
 	if err != nil {
@@ -76,7 +68,7 @@ func (model *postModel) convertToByteArray() []byte {
 }
 
 
-func publishMqtt(channel *amqp.Channel){
+func publishMqtt(channel *amqp.Channel, message postModel){
 	mqttQueueModel := mqtt.QueueModel{
 		Channel: channel,
 		Exchange: "events",
@@ -89,7 +81,7 @@ func publishMqtt(channel *amqp.Channel){
 		Channel: channel,
 		Exchange: "events",
 		Message: amqp.Publishing{
-			Body: []byte("Hello World"),
+			Body: message.convertToByteArray(),
 		},
 	}
 
