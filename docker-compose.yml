@@ -63,6 +63,8 @@ services:
   mqtt:
     image: "rabbitmq:alpine"  
     container_name: mqtt
+    restart: always
+    privileged: true
     networks:
       - microservice
     ports:
