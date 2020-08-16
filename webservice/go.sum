@@ -1,3 +1,5 @@
+github.com/assembla/cony v0.3.2 h1:C4xSKx+jrXAdLOVN9Eb6gR1c2oef5J5wZKTpSWA8C6A=
+github.com/assembla/cony v0.3.2/go.mod h1:tc5T6tc0un/CDPqiSpLkTS2oUuiO34ab85YCKzSpkDw=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/golobby/container v1.2.3 h1:XqCMfdP40oYJf4IRML2/NmDpBUDEZXZoHLz5J32+UiY=

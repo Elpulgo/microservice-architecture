@@ -8,7 +8,9 @@ import (
 	"github.com/streadway/amqp"
 )
 
-// Setup dial the RabbitMq instance, create a channel and bind an exchange to the channel
+const maxConnectionRetries = 20
+
+// Setup create a new client and connect to the RabbitMq instance, create a channel
 func Setup(exchangeName string) *amqp.Channel {
 	connection := dial()
 	channel := createChannel(connection)
@@ -20,21 +22,14 @@ func dial() *amqp.Connection {
 	// Get the connection string from the environment variable
 	url := os.Getenv("AMQP_URL")
 
-	//If it doesn't exist, use the default connection string.
-	if url == "" {
-		//Don't do this in production, this is for testing purposes only.
-		url = "amqp://guest:guest@localhost:5672"
-	}
-
-	maxRetries := 20
 	retries := 0
 
-	for retries < maxRetries {
+	for retries <= maxConnectionRetries {
 		// Connect to the rabbitMQ instance
 		connection, err := amqp.Dial(url)
 
 		if err != nil {
-			fmt.Printf("Failed to establish connection with RabbitMQ, retry nr %d / %d \n", retries, maxRetries)
+			fmt.Printf("Failed to establish connection with RabbitMQ, retry nr %d / %d \n", retries, maxConnectionRetries)
 			retries++
 			time.Sleep(1 * time.Second)
 			continue
