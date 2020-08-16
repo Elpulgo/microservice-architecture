@@ -1,8 +1,13 @@
 pub mod mqtt_consumer;
+use amiquip::Result;
 use mqtt_consumer::consume;
-use amiquip::{Result, Error};
-
 
 fn main() -> Result<()> {
-  consume();
+    match consume() {
+        Ok(_) => Ok(()),
+        Err(err) => {
+            println!("Failed to consume messages from MQTT! {}", err);
+            Ok(())
+        } 
+    }
 }
