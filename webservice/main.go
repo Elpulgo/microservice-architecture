@@ -5,7 +5,6 @@
 package main
 
 import (
-	"github.com/streadway/amqp"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -13,23 +12,28 @@ import (
 	"net/http"
 	"os"
 	"webservice/mqtt"
+
+	"github.com/streadway/amqp"
 )
 
 var addr = flag.String("addr", ":8080", "http service address")
+var exchangeName = flag.String("exchange", "exchange_events", "Name for MQTT exchange")
+var queueName = flag.String("queue", "events", "Name of the MQTT queue to publish messages to")
 var channel *amqp.Channel
 
 func main() {
 	flag.Parse()
 
-	channel := mqtt.Setup("events")
-	
+	channel := mqtt.Setup(*exchangeName)
+	setupQueue(channel)
+
 	http.HandleFunc("/api/hello", func(w http.ResponseWriter, r *http.Request) {
 		enableCors(&w)
 		var model postModel
 		if err := json.NewDecoder(r.Body).Decode(&model); err != nil {
 			log.Println("Failed to decode value from HTTP Request!")
 		}
-		
+
 		log.Printf("Got a request from HTTP:, Key: '%s', Value: '%s', will publish to MQTT broker!", model.Key, model.Value)
 		publishMqtt(channel, model)
 	})
@@ -67,19 +71,10 @@ func (model *postModel) convertToByteArray() []byte {
 	return byteArray
 }
 
-
-func publishMqtt(channel *amqp.Channel, message postModel){
-	mqttQueueModel := mqtt.QueueModel{
-		Channel: channel,
-		Exchange: "events",
-		QueueName: "events",
-	}
-
-	mqtt.SetupQueue(mqttQueueModel)
-
+func publishMqtt(channel *amqp.Channel, message postModel) {
 	mqttPublishModel := mqtt.PublishModel{
-		Channel: channel,
-		Exchange: "events",
+		Channel:  channel,
+		Exchange: *exchangeName,
 		Message: amqp.Publishing{
 			Body: message.convertToByteArray(),
 		},
@@ -87,4 +82,15 @@ func publishMqtt(channel *amqp.Channel, message postModel){
 
 	mqtt.Publish(mqttPublishModel)
 	fmt.Println("Successfully published message")
+}
+
+func setupQueue(channel *amqp.Channel) {
+	mqttQueueModel := mqtt.QueueModel{
+		Channel:   channel,
+		Exchange:  *exchangeName,
+		QueueName: *queueName,
+	}
+
+	mqtt.SetupQueue(mqttQueueModel)
+	fmt.Println("Successfully setup queue")
 }
