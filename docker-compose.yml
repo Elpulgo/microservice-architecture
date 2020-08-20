@@ -13,6 +13,7 @@ services:
       dockerfile: Dockerfile
     environment:
       - AMQP_URL=amqp://guest:guest@mqtt:5672
+      - BATCH_SIZE=500
     depends_on: 
       - mqtt
 
@@ -61,7 +62,7 @@ services:
       - mqtt 
 
   mqtt:
-    image: "rabbitmq:alpine"  
+    image: "rabbitmq:management-alpine"  
     container_name: mqtt
     restart: always
     privileged: true
