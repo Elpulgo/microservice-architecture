@@ -1,22 +1,94 @@
+@using System
 @inject HttpService HttpService
 
 
-<h1>Send a key value pair to execute a roundtrip</h1>
-<label>Key</label>
-<input @bind="@Key" />
+<h3>Send a key value pair to execute a roundtrip</h3>
+<div class="col-12">
+    <label>Key</label>
+    <input @bind="@Key" />
+</div>
+<div class="col-12">
+    <label>Value</label>
+    <input @bind="@Value" />
+</div>
+<br>
+<button class="btn btn-success" @onclick="@SendKey">Send key value pair</button>
 
-<label>Value</label>
-<input @bind="@Value" />
+@if(KeyValuePairSuccess){
+    <br>
+    <span style="padding-top: 10px; color: lightseagreen; font-weight: bold;">Key value pair was successfully sent!</span>
+}
 
-<button @onclick="@SendKey">Send key value pair</button>
+@if(!string.IsNullOrEmpty(KeyValueException)){
+    <span style="padding-top: 10px; color: red; font-weight: bold;">@KeyValueException</span>
+}
+
+<hr>
+<br>
+<client.components.Result></client.components.Result>
+<br>
+<hr>
+<h3>Send a batch of key/value pairs. (Won't execute roundtrip)</h3>
+<button class="btn btn-success" @onclick="@SendBatch">Send batch</button>
+
+@if(BatchSuccess){
+    <br>
+    <span style="padding-top: 10px; color: lightseagreen; font-weight: bold;">Batch was successfully sent!</span>
+}
+
+@if(!string.IsNullOrEmpty(BatchException)){
+    <br>
+    <span style="padding-top: 10px; color: red; font-weight: bold;">@BatchException</span>
+}
 
 @code{
     private string Key { get; set; }
     private string Value { get; set; }
 
+    private string KeyValueException { get; set; }
+    private string BatchException { get; set; }
+    private bool BatchSuccess { get; set; }
+    private bool KeyValuePairSuccess { get; set; }
+
+
     public async Task SendKey()
     {
+        KeyValuePairSuccess = false;
+        KeyValueException = string.Empty;
         var model = new PostModel(Key, Value);
-        await HttpService.PostAsync(model);
+
+        try
+        {
+            await HttpService.PostAsync(model);
+            KeyValuePairSuccess = true;
+        }
+        catch (Exception exception)
+        {
+            KeyValueException = exception.Message;
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+
+    public async Task SendBatch()
+    {
+        BatchSuccess = false;
+        BatchException = string.Empty;
+
+        try
+        {
+            await HttpService.PostBatchAsync();
+            BatchSuccess = true;
+        }
+        catch (Exception exception)
+        {
+            BatchException = exception.Message;
+        }
+        finally
+        {
+            StateHasChanged();
+        }
     }
 }
