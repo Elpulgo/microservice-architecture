@@ -25,16 +25,23 @@ pub fn consume() -> Result<()> {
 
     // Start a consumer.
     let consumer = queue.consume(ConsumerOptions::default())?;
+
     println!("Waiting for messages...");
 
-    for (i, message) in consumer.receiver().iter().enumerate() {
+    for (_, message) in consumer.receiver().iter().enumerate() {
         match message {
             ConsumerMessage::Delivery(delivery) => {
                 let body = String::from_utf8_lossy(&delivery.body);
-                println!("({:>3}) Received [{}]", i, body);
+                println!("({:>3}) Received [{}]", delivery.delivery_tag(), body);
                 // consumer.reject(delivery, false)?;
                 // consumer.nack(delivery, false)?;
+                // consumer.ack_multiple(delivery)?;
                 consumer.ack(delivery)?;
+                
+                // ack(delivery)?;
+            }
+            ConsumerMessage::ClientCancelled => {
+                println!("Client cancelled");
             }
             other => {
                 println!("Consumer ended: {:?}", other);
@@ -43,6 +50,7 @@ pub fn consume() -> Result<()> {
         }
     }
 
+    println!("Will close MQTT connection!");
     connection.close()
 }
 
