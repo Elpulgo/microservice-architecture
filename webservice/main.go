@@ -1,16 +1,12 @@
-// Copyright 2013 The Gorilla WebSocket Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
-
 package main
 
 import (
 	"encoding/json"
 	"flag"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"webservice/mqtt"
 
 	"github.com/streadway/amqp"
@@ -19,78 +15,134 @@ import (
 var addr = flag.String("addr", ":8080", "http service address")
 var exchangeName = flag.String("exchange", "exchange_events", "Name for MQTT exchange")
 var queueName = flag.String("queue", "events", "Name of the MQTT queue to publish messages to")
-var channel *amqp.Channel
+var connectionName = flag.String("connection", "event_producer", "Name of the MQTT connection")
+var batchSize = 100
 
 func main() {
 	flag.Parse()
+	size, err := strconv.Atoi(os.Getenv("BATCH_SIZE"))
+	if err != nil {
+		batchSize = 100
+		log.Println("Failed to set BATCH_SIZE from env variable, will default to 100")
+	} else {
+		batchSize = size
+	}
 
-	channel := mqtt.Setup(*exchangeName)
-	setupQueue(channel)
+	connection := initMQTTConnection()
 
-	http.HandleFunc("/api/hello", func(w http.ResponseWriter, r *http.Request) {
-		enableCors(&w)
-		var model postModel
+	// Will publish key/value pair to MQTT broker for roundtrip in the microservice architecture, and come back
+	// via websocket to client. This endpoint will wait for confirmation of message from server and respond with a status
+	// if message was confirmed or not by consumer
+	http.HandleFunc("/api/roundtrip", func(w http.ResponseWriter, r *http.Request) {
+		var model PostModel
 		if err := json.NewDecoder(r.Body).Decode(&model); err != nil {
 			log.Println("Failed to decode value from HTTP Request!")
 		}
 
-		log.Printf("Got a request from HTTP:, Key: '%s', Value: '%s', will publish to MQTT broker!", model.Key, model.Value)
-		publishMqtt(channel, model)
+		log.Printf("Got a request to publish:, Key: '%s', Value: '%s', will publish to MQTT broker!", model.Key, model.Value)
+		if succeded := publish(connection, model); succeded == true {
+			w.WriteHeader(http.StatusOK)
+		} else {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+	})
+
+	// Will publish a batch of key/value pairs to MQTT broker, won't do a roundtrip, but will
+	// wait for confirmation of all messages and will be saved in Redis.
+	http.HandleFunc("/api/batch", func(w http.ResponseWriter, r *http.Request) {
+		log.Println("Got a request to publish batch. Size of batch: ", batchSize)
+		if succeded := publishBatch(connection); succeded == true {
+			w.WriteHeader(http.StatusOK)
+		} else {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
 	})
 
 	log.Println("Webservice started, listening on http://localhost:8080")
 
-	err := http.ListenAndServe(*addr, nil)
+	err = http.ListenAndServe(*addr, enableCors(http.DefaultServeMux))
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 		os.Exit(1)
 	}
 }
 
-func enableCors(w *http.ResponseWriter) {
-	(*w).Header().Add("Connection", "keep-alive")
-	(*w).Header().Add("Access-Control-Allow-Methods", "POST, OPTIONS, GET, DELETE, PUT")
-	(*w).Header().Add("Access-Control-Max-Age", "86400")
-	(*w).Header().Set("Access-Control-Allow-Origin", "*")
-	(*w).Header().Set("Access-Control-Allow-Headers", "Content-Type")
+func enableCors(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Connection", "keep-alive")
+		w.Header().Add("Access-Control-Allow-Methods", "POST, OPTIONS, GET, DELETE, PUT")
+		w.Header().Add("Access-Control-Max-Age", "86400")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		h.ServeHTTP(w, r)
+	})
 }
 
-type postModel struct {
-	Key   string
-	Value string
-}
+func initMQTTConnection() *mqtt.Connection {
+	connection := mqtt.NewConnection(
+		*connectionName, // name
+		*exchangeName,   // exchange name
+		[]string{
+			*queueName, // queues
+		})
 
-func (model *postModel) convertToByteArray() []byte {
-
-	var byteArray, err = json.Marshal(model)
-	if err != nil {
-		fmt.Println("Failed to convert model to byte array!")
-		os.Exit(1)
+	if err := connection.Connect(); err != nil {
+		panic(err)
 	}
 
-	return byteArray
-}
-
-func publishMqtt(channel *amqp.Channel, message postModel) {
-	mqttPublishModel := mqtt.PublishModel{
-		Channel:  channel,
-		Exchange: *exchangeName,
-		Message: amqp.Publishing{
-			Body: message.convertToByteArray(),
-		},
+	if err := connection.DeclareChannel(); err != nil {
+		panic(err)
 	}
 
-	mqtt.Publish(mqttPublishModel)
-	fmt.Println("Successfully published message")
-}
-
-func setupQueue(channel *amqp.Channel) {
-	mqttQueueModel := mqtt.QueueModel{
-		Channel:   channel,
-		Exchange:  *exchangeName,
-		QueueName: *queueName,
+	if err := connection.BindQueues(); err != nil {
+		panic(err)
 	}
 
-	mqtt.SetupQueue(mqttQueueModel)
-	fmt.Println("Successfully setup queue")
+	return connection
+}
+
+func publish(connection *mqtt.Connection, message PostModel) bool {
+	mqttMessage := amqp.Publishing{
+		DeliveryMode: amqp.Transient,
+		Body:         message.ConvertToByteArray(),
+	}
+
+	for _, queue := range connection.Queues {
+		if err := connection.Publish(mqttMessage, queue); err != nil {
+			log.Fatalf("Failed to publish messaged with key: %s and value: %s, err: %s!", message.Key, message.Value, err.Error())
+			return false
+		}
+	}
+
+	log.Printf("Successfully published message with key: %s and value: %s!", message.Key, message.Value)
+	return true
+}
+
+func publishBatch(connection *mqtt.Connection) bool {
+	mqttMessages := []amqp.Publishing{}
+	i := 0
+	for i < batchSize {
+		message := PostModel{
+			Key:   "batch_key_" + strconv.Itoa(i),
+			Value: "batch_value_" + strconv.Itoa(i),
+		}
+
+		mqttMessage := amqp.Publishing{
+			DeliveryMode: amqp.Transient,
+			Body:         message.ConvertToByteArray(),
+		}
+
+		mqttMessages = append(mqttMessages, mqttMessage)
+		i++
+	}
+
+	for _, queue := range connection.Queues {
+		if err := connection.PublishBatch(mqttMessages, queue); err != nil {
+			log.Fatalf("Failed to publish batch, err: %s!", err.Error())
+			return false
+		}
+	}
+
+	log.Printf("Successfully published batch of (%d) messages!", batchSize)
+	return true
 }
