@@ -17,7 +17,12 @@ namespace client
 
         public async Task PostAsync(PostModel model)
         {
-            var result =  await m_HttpClient.PostAsJsonAsync("api/hello", model);
+            var result =  await m_HttpClient.PostAsJsonAsync("api/roundtrip", model);
+            result.EnsureSuccessStatusCode();
+        }
+
+        public async Task PostBatchAsync(){
+            var result = await m_HttpClient.PostAsJsonAsync("api/batch", new object());
             result.EnsureSuccessStatusCode();
         }
     }

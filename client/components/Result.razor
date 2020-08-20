@@ -6,9 +6,12 @@
     @if(!string.IsNullOrEmpty(ErrorMessageConnect)){
         <div>Failed to connect to Websocket: @ErrorMessageConnect</div>
     }else{
-        <h1>Broadcasted from Web Api</h1>
-        <span>Key: @Model?.Key</span>
-        <span>Value: @Model?.Value</span>
+        <h3>Broadcasted from WebSocketService</h3>
+        <div class="col-12">
+            Key:<span style="font-weight:bold; padding-left:10px;">@Model?.Key</span>
+            <br>
+            Value:<span style="font-weight:bold; padding-left:10px;">@Model?.Value</span>
+        </div>
     }
 </div>
 
