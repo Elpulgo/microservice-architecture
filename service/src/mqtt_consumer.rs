@@ -1,44 +1,73 @@
+use crate::mqtt_message::{Batch, RoundTrip};
 use amiquip::{Connection, ConsumerMessage, ConsumerOptions, QueueDeclareOptions, Result};
-use std::env;
 use std::io::{Error, ErrorKind};
 use std::{thread, time};
 use url::Url;
 
 const MAX_CONNECTION_TRIES: i32 = 20;
 
-pub fn consume() -> Result<()> {
-    // Read amqp url from docker env
-    let amqp_url = env::var("AMQP_URL").unwrap();
+pub enum MessageKind {
+    ROUNDTRIP,
+    BATCH,
+}
 
-    let mut connection: Connection = match try_connect(amqp_url) {
-        Ok(con) => con,
-        Err(err) => return Result::Err(err),
-    };
+pub fn consume(
+    channel: &amiquip::Channel,
+    queue_name: &str,
+    message_kind: MessageKind,
+) -> Result<()> {
+    let queue = channel.queue_declare(queue_name, QueueDeclareOptions::default())?;
 
-    // Open a channel - None says let the library choose the channel ID.
-    let channel = connection.open_channel(None)?;
+    println!("Queue '{}' was declared!", queue_name);
 
-    // Declare the queue.
-    let queue = channel.queue_declare("events", QueueDeclareOptions::default())?;
-
-    println!("Queue was declared!");
-
-    // Start a consumer.
     let consumer = queue.consume(ConsumerOptions::default())?;
 
-    println!("Waiting for messages...");
+    println!("Waiting for messages in queue '{}'...", queue_name);
 
     for (_, message) in consumer.receiver().iter().enumerate() {
         match message {
             ConsumerMessage::Delivery(delivery) => {
                 let body = String::from_utf8_lossy(&delivery.body);
-                println!("({:>3}) Received [{}]", delivery.delivery_tag(), body);
-                // consumer.reject(delivery, false)?;
-                // consumer.nack(delivery, false)?;
-                // consumer.ack_multiple(delivery)?;
+
+                match message_kind {
+                    MessageKind::ROUNDTRIP => {
+                        match serde_json::from_str::<RoundTrip>(&body){
+                            Ok(roundtrip) => {
+                                println!(
+                                    "('{}' {:>3}) Received [{:?}]",
+                                    queue_name,
+                                    delivery.delivery_tag(),
+                                    roundtrip
+                                );
+                            },
+                            Err(_) => {
+                                println!("Failed to parse roundtrip value: {:?}", &body);
+                                consumer.reject(delivery, false)?;
+                                continue;
+                            }
+                        }
+                        
+                    }
+                    MessageKind::BATCH => {
+                        match serde_json::from_str::<Batch>(&body){
+                            Ok(batch) => {
+                                println!(
+                                    "('{}' {:>3}) Received [{:?}]",
+                                    queue_name,
+                                    delivery.delivery_tag(),
+                                    batch
+                                );
+                            },
+                            Err(_) => {
+                                println!("Failed to parse batch value: {:?}", &body);
+                                consumer.reject(delivery, false)?;
+                                continue;
+                            }
+                        }
+                    }
+                }
+
                 consumer.ack(delivery)?;
-                
-                // ack(delivery)?;
             }
             ConsumerMessage::ClientCancelled => {
                 println!("Client cancelled");
@@ -50,11 +79,10 @@ pub fn consume() -> Result<()> {
         }
     }
 
-    println!("Will close MQTT connection!");
-    connection.close()
+    return Ok(());
 }
 
-fn try_connect(amqp_url: String) -> Result<amiquip::Connection> {
+pub fn try_connect(amqp_url: String) -> Result<amiquip::Connection> {
     let mut connection_retries = 0;
 
     // Open connection.
