@@ -1,11 +1,15 @@
 [package]
-name = "service"
-version = "0.1.0"
 authors = ["Oscar <oscar.f.larsson@gmail.com>"]
 edition = "2018"
+name = "service"
+version = "0.1.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-amiquip = { version = "0.3", default-features = false }
-url =  { version= "1.7.2" }
+amiquip = {version = "0.3", default-features = false}
+chrono = {version = "0.4"}
+redis = {version = "0.17.0"}
+serde = {version = "1.0", features = ["derive"]}
+serde_json = {version = "1.0"}
+url = {version = "1.7.2"}
