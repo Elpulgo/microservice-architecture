@@ -17,6 +17,30 @@ pub struct Batch {
     value: String,
 }
 
+impl RoundTrip {
+    pub fn key(&self) -> &String {
+        return &self.key;
+    }
+
+    pub fn value(&self) -> &String {
+        return &self.value;
+    }
+}
+
+impl Batch {
+    pub fn timestamp(&self) -> &DateTime<Utc> {
+        return &self.timestamp;
+    }
+
+    pub fn key(&self) -> &String {
+        return &self.key;
+    }
+
+    pub fn value(&self) -> &String {
+        return &self.value;
+    }
+}
+
 mod custom_date_format {
     use chrono::{DateTime, TimeZone, Utc};
     use serde::{self, Deserialize, Deserializer, Serializer};

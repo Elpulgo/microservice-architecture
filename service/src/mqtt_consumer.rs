@@ -1,4 +1,5 @@
 use crate::mqtt_message::{Batch, RoundTrip};
+use crate::redis_manager::set;
 use amiquip::{Connection, ConsumerMessage, ConsumerOptions, QueueDeclareOptions, Result};
 use std::io::{Error, ErrorKind};
 use std::{thread, time};
@@ -30,41 +31,47 @@ pub fn consume(
                 let body = String::from_utf8_lossy(&delivery.body);
 
                 match message_kind {
-                    MessageKind::ROUNDTRIP => {
-                        match serde_json::from_str::<RoundTrip>(&body){
-                            Ok(roundtrip) => {
-                                println!(
-                                    "('{}' {:>3}) Received [{:?}]",
-                                    queue_name,
-                                    delivery.delivery_tag(),
-                                    roundtrip
-                                );
-                            },
-                            Err(_) => {
-                                println!("Failed to parse roundtrip value: {:?}", &body);
-                                consumer.reject(delivery, false)?;
-                                continue;
+                    MessageKind::ROUNDTRIP => match serde_json::from_str::<RoundTrip>(&body) {
+                        Ok(roundtrip) => {
+                            println!(
+                                "('{}' {:>3}) Received [{:?}]",
+                                queue_name,
+                                delivery.delivery_tag(),
+                                roundtrip
+                            );
+
+                            match set(&roundtrip.key(), &roundtrip.value()) {
+                                Ok(_) => {
+                                    println!("Successfully stored key/value in redis!");
+                                }
+                                Err(err) => {
+                                    println!("Failed to store key/value in redis: {}", err);
+                                    consumer.reject(delivery, false)?;
+                                    continue;
+                                }
                             }
                         }
-                        
-                    }
-                    MessageKind::BATCH => {
-                        match serde_json::from_str::<Batch>(&body){
-                            Ok(batch) => {
-                                println!(
-                                    "('{}' {:>3}) Received [{:?}]",
-                                    queue_name,
-                                    delivery.delivery_tag(),
-                                    batch
-                                );
-                            },
-                            Err(_) => {
-                                println!("Failed to parse batch value: {:?}", &body);
-                                consumer.reject(delivery, false)?;
-                                continue;
-                            }
+                        Err(_) => {
+                            println!("Failed to parse roundtrip value: {:?}", &body);
+                            consumer.reject(delivery, false)?;
+                            continue;
                         }
-                    }
+                    },
+                    MessageKind::BATCH => match serde_json::from_str::<Batch>(&body) {
+                        Ok(batch) => {
+                            println!(
+                                "('{}' {:>3}) Received [{:?}]",
+                                queue_name,
+                                delivery.delivery_tag(),
+                                batch
+                            );
+                        }
+                        Err(_) => {
+                            println!("Failed to parse batch value: {:?}", &body);
+                            consumer.reject(delivery, false)?;
+                            continue;
+                        }
+                    },
                 }
 
                 consumer.ack(delivery)?;
