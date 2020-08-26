@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 	"webservice/mqtt"
 
 	"github.com/streadway/amqp"
@@ -14,7 +15,8 @@ import (
 
 var addr = flag.String("addr", ":8080", "http service address")
 var exchangeName = flag.String("exchange", "exchange_events", "Name for MQTT exchange")
-var queueName = flag.String("queue", "events", "Name of the MQTT queue to publish messages to")
+var roundTripQueueName = flag.String("roundTripQueue", "events", "Name of the MQTT queue to publish roundtrip messages to")
+var batchQueueName = flag.String("batchQueue", "batch", "Name of the MQTT queue to publish roundtrip messages to")
 var connectionName = flag.String("connection", "event_producer", "Name of the MQTT connection")
 var batchSize = 100
 
@@ -83,7 +85,8 @@ func initMQTTConnection() *mqtt.Connection {
 		*connectionName, // name
 		*exchangeName,   // exchange name
 		[]string{
-			*queueName, // queues
+			*roundTripQueueName, // queues
+			*batchQueueName,
 		})
 
 	if err := connection.Connect(); err != nil {
@@ -103,15 +106,14 @@ func initMQTTConnection() *mqtt.Connection {
 
 func publish(connection *mqtt.Connection, message PostModel) bool {
 	mqttMessage := amqp.Publishing{
+		ContentType:  "application/json",
 		DeliveryMode: amqp.Transient,
 		Body:         message.ConvertToByteArray(),
 	}
 
-	for _, queue := range connection.Queues {
-		if err := connection.Publish(mqttMessage, queue); err != nil {
-			log.Fatalf("Failed to publish messaged with key: %s and value: %s, err: %s!", message.Key, message.Value, err.Error())
-			return false
-		}
+	if err := connection.Publish(mqttMessage, *roundTripQueueName); err != nil {
+		log.Fatalf("Failed to publish messaged with key: %s and value: %s, err: %s!", message.Key, message.Value, err.Error())
+		return false
 	}
 
 	log.Printf("Successfully published message with key: %s and value: %s!", message.Key, message.Value)
@@ -121,13 +123,16 @@ func publish(connection *mqtt.Connection, message PostModel) bool {
 func publishBatch(connection *mqtt.Connection) bool {
 	mqttMessages := []amqp.Publishing{}
 	i := 0
+	time := time.Now()
 	for i < batchSize {
-		message := PostModel{
-			Key:   "batch_key_" + strconv.Itoa(i),
-			Value: "batch_value_" + strconv.Itoa(i),
+		message := BatchModel{
+			Timestamp: time,
+			Key:       "batch_key_" + strconv.Itoa(i),
+			Value:     "batch_value_" + strconv.Itoa(i),
 		}
 
 		mqttMessage := amqp.Publishing{
+			ContentType:  "application/json",
 			DeliveryMode: amqp.Transient,
 			Body:         message.ConvertToByteArray(),
 		}
@@ -136,11 +141,9 @@ func publishBatch(connection *mqtt.Connection) bool {
 		i++
 	}
 
-	for _, queue := range connection.Queues {
-		if err := connection.PublishBatch(mqttMessages, queue); err != nil {
-			log.Fatalf("Failed to publish batch, err: %s!", err.Error())
-			return false
-		}
+	if err := connection.PublishBatch(mqttMessages, *batchQueueName); err != nil {
+		log.Fatalf("Failed to publish batch, err: %s!", err.Error())
+		return false
 	}
 
 	log.Printf("Successfully published batch of (%d) messages!", batchSize)
