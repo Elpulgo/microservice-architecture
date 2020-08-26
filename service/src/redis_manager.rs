@@ -56,11 +56,10 @@ pub fn set(key: &str, value: &str) -> RedisResult<()> {
 }
 
 pub fn set_hash(hash_key: &str, key: &str, value: &str) -> RedisResult<()> {
-
-    // TODO: Set hash instead...
     let result: () = REDIS_CONNECTION.with(|redis_connection_cell| {
         let mut con = redis_connection_cell.borrow_mut();
-        let result = redis::cmd("SET")
+        let result = redis::cmd("HSET")
+            .arg(hash_key)
             .arg(key)
             .arg(value)
             .query(&mut *con)

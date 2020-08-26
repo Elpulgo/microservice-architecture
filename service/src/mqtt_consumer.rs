@@ -120,7 +120,7 @@ fn handle_roundtrip(body: &str, queue_name: &str, delivery: &Delivery) -> Result
 
 fn handle_batch(body: &str, queue_name: &str, delivery: &Delivery) -> Result<(), String> {
     match serde_json::from_str::<Batch>(&body) {
-        Ok(batch) => match redis_manager::set_hash("apa", &batch.key(), &batch.value()) {
+        Ok(batch) => match redis_manager::set_hash(&batch.hash_key(), &batch.key(), &batch.value()) {
             Ok(_) => {
                 println!(
                     "('{}' {:>3}) Received BATCH and stored in redis [{:?}]",
