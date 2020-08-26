@@ -1,6 +1,6 @@
-use crate::mqtt_message::{Batch, RoundTrip};
-use crate::redis_manager::set;
-use amiquip::{Connection, ConsumerMessage, ConsumerOptions, QueueDeclareOptions, Result};
+use crate::mqtt_message::{Batch, KeyValue, RoundTrip};
+use crate::redis_manager;
+use amiquip::{Connection, ConsumerMessage, ConsumerOptions, Delivery, QueueDeclareOptions};
 use std::io::{Error, ErrorKind};
 use std::{thread, time};
 use url::Url;
@@ -16,7 +16,7 @@ pub fn consume(
     channel: &amiquip::Channel,
     queue_name: &str,
     message_kind: MessageKind,
-) -> Result<()> {
+) -> amiquip::Result<()> {
     let queue = channel.queue_declare(queue_name, QueueDeclareOptions::default())?;
 
     println!("Queue '{}' was declared!", queue_name);
@@ -31,53 +31,20 @@ pub fn consume(
                 let body = String::from_utf8_lossy(&delivery.body);
 
                 match message_kind {
-                    MessageKind::ROUNDTRIP => match serde_json::from_str::<RoundTrip>(&body) {
-                        Ok(roundtrip) => {
-                            println!(
-                                "('{}' {:>3}) Received [{:?}]",
-                                queue_name,
-                                delivery.delivery_tag(),
-                                roundtrip
-                            );
-
-                            match set(&roundtrip.key(), &roundtrip.value()) {
-                                Ok(_) => {
-                                    println!("Successfully stored key/value in redis!");
-                                }
-                                Err(err) => {
-                                    println!("Failed to store key/value in redis: {}", err);
-                                    consumer.reject(delivery, false)?;
-                                    continue;
-                                }
-                            }
-                        }
-                        Err(_) => {
-                            println!("Failed to parse roundtrip value: {:?}", &body);
-                            consumer.reject(delivery, false)?;
-                            continue;
-                        }
+                    MessageKind::ROUNDTRIP => match handle_roundtrip(&body, &queue_name, &delivery)
+                    {
+                        Ok(_) => consumer.ack(delivery)?,
+                        Err(_) => consumer.reject(delivery, false)?,
                     },
-                    MessageKind::BATCH => match serde_json::from_str::<Batch>(&body) {
-                        Ok(batch) => {
-                            println!(
-                                "('{}' {:>3}) Received [{:?}]",
-                                queue_name,
-                                delivery.delivery_tag(),
-                                batch
-                            );
-                        }
-                        Err(_) => {
-                            println!("Failed to parse batch value: {:?}", &body);
-                            consumer.reject(delivery, false)?;
-                            continue;
-                        }
+                    MessageKind::BATCH => match handle_batch(&body, &queue_name, &delivery) {
+                        Ok(_) => consumer.ack(delivery)?,
+                        Err(_) => consumer.reject(delivery, false)?,
                     },
                 }
-
-                consumer.ack(delivery)?;
             }
             ConsumerMessage::ClientCancelled => {
                 println!("Client cancelled");
+                break;
             }
             other => {
                 println!("Consumer ended: {:?}", other);
@@ -89,7 +56,7 @@ pub fn consume(
     return Ok(());
 }
 
-pub fn try_connect(amqp_url: String) -> Result<amiquip::Connection> {
+pub fn try_connect(amqp_url: String) -> amiquip::Result<amiquip::Connection> {
     let mut connection_retries = 0;
 
     // Open connection.
@@ -121,5 +88,56 @@ pub fn try_connect(amqp_url: String) -> Result<amiquip::Connection> {
         println!("Successfully connected to MQTT broker!");
 
         return Ok(connection);
+    }
+}
+
+fn handle_roundtrip(body: &str, queue_name: &str, delivery: &Delivery) -> Result<(), String> {
+    match serde_json::from_str::<RoundTrip>(&body) {
+        Ok(roundtrip) => match redis_manager::set(&roundtrip.key(), &roundtrip.value()) {
+            Ok(_) => {
+                println!(
+                    "('{}' {:>3}) Received ROUNDTRIP and stored in redis [{:?}]",
+                    queue_name,
+                    delivery.delivery_tag(),
+                    roundtrip
+                );
+                return Ok(());
+            }
+            Err(err) => {
+                println!("Failed to store ROUNDTRIP key/value in redis: {}", err);
+                return Err(String::from("Failed to set value in redis!"));
+            }
+        },
+        Err(err) => {
+            println!(
+                "Failed to parse roundtrip value: {:?}, error: {}",
+                &body, err
+            );
+            return Err(String::from("Failed to parse roundtrip value!"));
+        }
+    }
+}
+
+fn handle_batch(body: &str, queue_name: &str, delivery: &Delivery) -> Result<(), String> {
+    match serde_json::from_str::<Batch>(&body) {
+        Ok(batch) => match redis_manager::set_hash("apa", &batch.key(), &batch.value()) {
+            Ok(_) => {
+                println!(
+                    "('{}' {:>3}) Received BATCH and stored in redis [{:?}]",
+                    queue_name,
+                    delivery.delivery_tag(),
+                    batch
+                );
+                return Ok(());
+            }
+            Err(err) => {
+                println!("Failed to store BATCH key/value in redis: {}", err);
+                return Err(String::from("Failed to set value in redis!"));
+            }
+        },
+        Err(err) => {
+            println!("Failed to parse batch value: {:?}, error: {}", &body, err);
+            return Err(String::from("Failed to parse batch value!"));
+        }
     }
 }
