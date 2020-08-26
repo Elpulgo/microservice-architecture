@@ -36,13 +36,13 @@ func main() {
 	// via websocket to client. This endpoint will wait for confirmation of message from server and respond with a status
 	// if message was confirmed or not by consumer
 	http.HandleFunc("/api/roundtrip", func(w http.ResponseWriter, r *http.Request) {
-		var model PostModel
-		if err := json.NewDecoder(r.Body).Decode(&model); err != nil {
+		var roundtrip RoundTrip
+		if err := json.NewDecoder(r.Body).Decode(&roundtrip); err != nil {
 			log.Println("Failed to decode value from HTTP Request!")
 		}
 
-		log.Printf("Got a request to publish:, Key: '%s', Value: '%s', will publish to MQTT broker!", model.Key, model.Value)
-		if succeded := publish(connection, model); succeded == true {
+		log.Printf("Got a request to publish:, Key: '%s', Value: '%s', will publish to MQTT broker!", roundtrip.Key, roundtrip.Value)
+		if succeded := publish(connection, roundtrip); succeded == true {
 			w.WriteHeader(http.StatusOK)
 		} else {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -104,7 +104,7 @@ func initMQTTConnection() *mqtt.Connection {
 	return connection
 }
 
-func publish(connection *mqtt.Connection, message PostModel) bool {
+func publish(connection *mqtt.Connection, message RoundTrip) bool {
 	mqttMessage := amqp.Publishing{
 		ContentType:  "application/json",
 		DeliveryMode: amqp.Transient,

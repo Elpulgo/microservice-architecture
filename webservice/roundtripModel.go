@@ -6,14 +6,14 @@ import (
 	"os"
 )
 
-// PostModel handles the values sent from client
-type PostModel struct {
+// RoundTrip handles the values sent from client for a roundtrip
+type RoundTrip struct {
 	Key   string
 	Value string
 }
 
 // ConvertToByteArray converts the model to a byte array
-func (model *PostModel) ConvertToByteArray() []byte {
+func (model *RoundTrip) ConvertToByteArray() []byte {
 	var byteArray, err = json.Marshal(model)
 	if err != nil {
 		fmt.Println("Failed to convert model to byte array!")
