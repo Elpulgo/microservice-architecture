@@ -8,8 +8,10 @@ pub fn publish(
     exchange: &amiquip::Exchange,
     roundtrip: &RoundTrip,
 ) -> Result<(), String> {
-    let roundtrip_as_bytes = bincode::serialize(roundtrip).unwrap();
-    match exchange.publish(amiquip::Publish::new(&roundtrip_as_bytes, ROUTING_KEY)) {
+
+    let bytes = serde_json::to_vec(&roundtrip).unwrap();
+
+    match exchange.publish(amiquip::Publish::new(&bytes, ROUTING_KEY)) {
         Ok(result) => {
             println!(
                 "Successfully forwarded roundtrip key/value: {:?}",

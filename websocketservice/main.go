@@ -10,24 +10,31 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"websocketservice/hub"
+	"websocketservice/mqtt"
 )
 
 var addr = flag.String("addr", ":8010", "http websocket service address")
+var connectionName = flag.String("connection", "event_consumer", "Name of the MQTT connection")
 
 func main() {
 	flag.Parse()
-	hub := newHub()
-	go hub.run()	
+	websocketHub := hub.NewHub()
+	go websocketHub.Run()
+
+	consumer := initMQTTConnection()
 
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		serveWs(hub, w, r)
+		hub.ServeWs(websocketHub, w, r)
 		testModel := postModel{
-			Key: "hello",
+			Key:   "hello",
 			Value: "yeeesh",
 		}
 
-		hub.broadcast <- testModel.convertToByteArray() 
+		websocketHub.Broadcast <- testModel.convertToByteArray()
 	})
+
+	consumer.Consume(websocketHub)
 
 	log.Println("Websocket service started, listening on ws://localhost:8010/ws")
 
@@ -37,14 +44,6 @@ func main() {
 		os.Exit(1)
 	}
 }
-
-// func enableCors(w *http.ResponseWriter) {
-// 	(*w).Header().Add("Connection", "keep-alive")
-// 	(*w).Header().Add("Access-Control-Allow-Methods", "POST, OPTIONS, GET, DELETE, PUT")
-// 	(*w).Header().Add("Access-Control-Max-Age", "86400")
-// 	(*w).Header().Set("Access-Control-Allow-Origin", "*")
-// 	(*w).Header().Set("Access-Control-Allow-Headers", "Content-Type")
-// }
 
 type postModel struct {
 	Key   string
@@ -60,4 +59,20 @@ func (model *postModel) convertToByteArray() []byte {
 	}
 
 	return byteArray
+}
+
+func initMQTTConnection() *mqtt.Consumer {
+	consumer := mqtt.NewConsumer(
+		*connectionName, // name
+	)
+
+	if err := consumer.Connect(); err != nil {
+		panic(err)
+	}
+
+	if err := consumer.DeclareQueue(); err != nil {
+		panic(err)
+	}
+
+	return consumer
 }
