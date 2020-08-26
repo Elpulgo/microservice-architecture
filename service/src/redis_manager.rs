@@ -49,7 +49,22 @@ pub fn set(key: &str, value: &str) -> RedisResult<()> {
             .arg(value)
             .query(&mut *con)
             .unwrap_or_default();
-        println!("Successfully added key: {} & value: {}", key, value);
+        return result;
+    });
+
+    return Ok(result);
+}
+
+pub fn set_hash(hash_key: &str, key: &str, value: &str) -> RedisResult<()> {
+
+    // TODO: Set hash instead...
+    let result: () = REDIS_CONNECTION.with(|redis_connection_cell| {
+        let mut con = redis_connection_cell.borrow_mut();
+        let result = redis::cmd("SET")
+            .arg(key)
+            .arg(value)
+            .query(&mut *con)
+            .unwrap_or_default();
         return result;
     });
 
