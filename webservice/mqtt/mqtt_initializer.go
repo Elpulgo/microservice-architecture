@@ -114,7 +114,7 @@ func (connection *Connection) DeclareChannel() error {
 
 	if err := connection.channel.ExchangeDeclare(
 		connection.exchange, // name
-		"fanout",            // type
+		"direct",            // type
 		false,               // durable
 		false,               // auto-deleted
 		false,               // internal
@@ -142,7 +142,7 @@ func (connection *Connection) BindQueues() error {
 
 		if err := connection.channel.QueueBind(
 			queue,               // queue name
-			"#",                 // routing key
+			queue,               // routing key
 			connection.exchange, // exchange name
 			false,               // noWait
 			nil,                 // arguments
