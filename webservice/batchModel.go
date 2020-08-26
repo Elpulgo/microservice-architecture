@@ -4,14 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"time"
 )
 
 // BatchModel handles batchvalues
 type BatchModel struct {
-	Timestamp time.Time
-	Key       string
-	Value     string
+	HashKey string
+	Key     string
+	Value   string
 }
 
 // ConvertToByteArray converts the model to a byte array

@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"time"
 	"webservice/mqtt"
 
+	"github.com/google/uuid"
 	"github.com/streadway/amqp"
 )
 
@@ -123,12 +123,12 @@ func publish(connection *mqtt.Connection, message PostModel) bool {
 func publishBatch(connection *mqtt.Connection) bool {
 	mqttMessages := []amqp.Publishing{}
 	i := 0
-	time := time.Now()
+	batchKey := uuid.New().String()
 	for i < batchSize {
 		message := BatchModel{
-			Timestamp: time,
-			Key:       "batch_key_" + strconv.Itoa(i),
-			Value:     "batch_value_" + strconv.Itoa(i),
+			HashKey: batchKey,
+			Key:     batchKey + "_key_" + strconv.Itoa(i),
+			Value:   batchKey + "_value_" + strconv.Itoa(i),
 		}
 
 		mqttMessage := amqp.Publishing{
