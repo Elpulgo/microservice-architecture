@@ -1,4 +1,5 @@
 use crate::mqtt_message::{Batch, KeyValue, RoundTrip};
+use crate::mqtt_publisher::publish;
 use crate::redis_manager;
 use amiquip::{Connection, ConsumerMessage, ConsumerOptions, Delivery, QueueDeclareOptions};
 use std::io::{Error, ErrorKind};
@@ -6,40 +7,73 @@ use std::{thread, time};
 use url::Url;
 
 const MAX_CONNECTION_TRIES: i32 = 20;
+const CONSUME_ROUNDTRIP_QUEUE_NAME: &str = "events";
+const CONSUME_BATCH_QUEUE_NAME: &str = "batch";
 
-pub enum MessageKind {
-    ROUNDTRIP,
-    BATCH,
-}
-
-pub fn consume(
-    channel: &amiquip::Channel,
-    queue_name: &str,
-    message_kind: MessageKind,
+pub fn consume_roundtrip(
+    consume_channel: &amiquip::Channel,
+    publish_forward_exchange: &amiquip::Exchange,
 ) -> amiquip::Result<()> {
-    let queue = channel.queue_declare(queue_name, QueueDeclareOptions::default())?;
+    let queue = consume_channel
+        .queue_declare(CONSUME_ROUNDTRIP_QUEUE_NAME, QueueDeclareOptions::default())?;
 
-    println!("Queue '{}' was declared!", queue_name);
+    println!("Queue '{}' was declared!", CONSUME_ROUNDTRIP_QUEUE_NAME);
 
     let consumer = queue.consume(ConsumerOptions::default())?;
 
-    println!("Waiting for messages in queue '{}'...", queue_name);
+    println!(
+        "Waiting for messages in queue '{}'...",
+        CONSUME_ROUNDTRIP_QUEUE_NAME
+    );
 
     for (_, message) in consumer.receiver().iter().enumerate() {
         match message {
             ConsumerMessage::Delivery(delivery) => {
                 let body = String::from_utf8_lossy(&delivery.body);
 
-                match message_kind {
-                    MessageKind::ROUNDTRIP => match handle_roundtrip(&body, &queue_name, &delivery)
-                    {
-                        Ok(_) => consumer.ack(delivery)?,
-                        Err(_) => consumer.reject(delivery, false)?,
-                    },
-                    MessageKind::BATCH => match handle_batch(&body, &queue_name, &delivery) {
-                        Ok(_) => consumer.ack(delivery)?,
-                        Err(_) => consumer.reject(delivery, false)?,
-                    },
+                match handle_roundtrip(&body, &delivery) {
+                    Ok(roundtrip) => {
+                        consumer.ack(delivery)?;
+                        match publish(&publish_forward_exchange, &roundtrip) {
+                            _ => continue,
+                        }
+                    }
+                    Err(_) => consumer.reject(delivery, false)?,
+                }
+            }
+            ConsumerMessage::ClientCancelled => {
+                println!("Client cancelled");
+                break;
+            }
+            other => {
+                println!("Consumer ended: {:?}", other);
+                break;
+            }
+        }
+    }
+
+    return Ok(());
+}
+
+pub fn consume_batch(channel: &amiquip::Channel) -> amiquip::Result<()> {
+    let queue = channel.queue_declare(CONSUME_BATCH_QUEUE_NAME, QueueDeclareOptions::default())?;
+    println!("Queue '{}' was declared!", CONSUME_BATCH_QUEUE_NAME);
+
+    let consumer = queue.consume(ConsumerOptions::default())?;
+
+    println!(
+        "Waiting for messages in queue '{}'...",
+        CONSUME_BATCH_QUEUE_NAME
+    );
+
+    for (_, message) in consumer.receiver().iter().enumerate() {
+        match message {
+            ConsumerMessage::Delivery(delivery) => {
+                let body = String::from_utf8_lossy(&delivery.body);
+
+                match handle_batch(&body, &delivery) {
+                    Ok(_) => consumer.ack(delivery)?,
+                    Err(_) => consumer.reject(delivery, false)?,
                 }
             }
             ConsumerMessage::ClientCancelled => {
@@ -91,17 +125,16 @@ pub fn try_connect(amqp_url: String) -> amiquip::Result<amiquip::Connection> {
     }
 }
 
-fn handle_roundtrip(body: &str, queue_name: &str, delivery: &Delivery) -> Result<(), String> {
+fn handle_roundtrip(body: &str, delivery: &Delivery) -> Result<RoundTrip, String> {
     match serde_json::from_str::<RoundTrip>(&body) {
         Ok(roundtrip) => match redis_manager::set(&roundtrip.key(), &roundtrip.value()) {
             Ok(_) => {
                 println!(
-                    "('{}' {:>3}) Received ROUNDTRIP and stored in redis [{:?}]",
-                    queue_name,
+                    "('{}') Received ROUNDTRIP and stored in redis [{:?}]",
                     delivery.delivery_tag(),
                     roundtrip
                 );
-                return Ok(());
+                return Ok(roundtrip);
             }
             Err(err) => {
                 println!("Failed to store ROUNDTRIP key/value in redis: {}", err);
@@ -118,13 +151,13 @@ fn handle_roundtrip(body: &str, queue_name: &str, delivery: &Delivery) -> Result
     }
 }
 
-fn handle_batch(body: &str, queue_name: &str, delivery: &Delivery) -> Result<(), String> {
+fn handle_batch(body: &str, delivery: &Delivery) -> Result<(), String> {
     match serde_json::from_str::<Batch>(&body) {
-        Ok(batch) => match redis_manager::set_hash(&batch.hash_key(), &batch.key(), &batch.value()) {
+        Ok(batch) => match redis_manager::set_hash(&batch.hash_key(), &batch.key(), &batch.value())
+        {
             Ok(_) => {
                 println!(
-                    "('{}' {:>3}) Received BATCH and stored in redis [{:?}]",
-                    queue_name,
+                    "('{}') Received BATCH and stored in redis [{:?}]",
                     delivery.delivery_tag(),
                     batch
                 );
