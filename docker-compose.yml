@@ -16,7 +16,24 @@ services:
       - BATCH_SIZE=500
     depends_on: 
       - mqtt
-      - redis
+
+  batch-webservice:
+    container_name: batch-webservice
+    restart: always
+    privileged: true
+    ports:
+        - "8000:80"
+    networks:
+      - microservice
+    build:
+      context: ./batch-webservice
+      dockerfile: Dockerfile
+    environment:
+        - ASPNETCORE_URLS=http://+
+        - AMQP_URL=amqp://guest:guest@mqtt:5672
+    depends_on:
+        - mqtt
+        - redis
 
   websocketservice:
     restart: always
@@ -26,12 +43,14 @@ services:
       - "8010:8010"
     networks:
       - microservice
+    environment: 
+      - AMQP_URL=amqp://guest:guest@mqtt:5672
     build:
       context: ./websocketservice
       dockerfile: Dockerfile
     depends_on: 
       - mqtt
-
+  
   client:
     restart: always
     privileged: true  
@@ -45,22 +64,22 @@ services:
       dockerfile: Dockerfile
     depends_on: 
       - webservice
-
-  service:
-    restart: always
-    privileged: true
-    container_name: service
-    networks: 
-      - microservice
-    build:
-      context: ./service
-      dockerfile: Dockerfile
-    environment: 
-      - AMQP_URL=amqp://guest:guest@mqtt:5672
-      - REDIS_URL=redis://redis:6379
-    depends_on: 
-      - mqtt 
-      - redis
+  
+  # service:
+  #   restart: always
+  #   privileged: true
+  #   container_name: service
+  #   networks: 
+  #     - microservice
+  #   build:
+  #     context: ./service
+  #     dockerfile: Dockerfile
+  #   environment: 
+  #     - AMQP_URL=amqp://guest:guest@mqtt:5672
+  #     - REDIS_URL=redis://redis:6379
+  #   depends_on: 
+  #     - mqtt 
+  #     - redis
 
   mqtt:
     image: "rabbitmq:management-alpine"  
