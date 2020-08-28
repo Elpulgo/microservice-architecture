@@ -1,11 +1,21 @@
 version: '3.5'
 services:
+  api-gateway:
+    restart: always
+    privileged: true
+    container_name: api-gateway
+    ports:
+      - "5001:80"
+    networks:
+      - microservice
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+
   webservice:
     restart: always
     privileged: true
     container_name: webservice
-    ports:      
-      - "8080:8080"
     networks:
       - microservice
     build:
@@ -21,15 +31,13 @@ services:
     container_name: batch-webservice
     restart: always
     privileged: true
-    ports:
-        - "8000:80"
     networks:
       - microservice
     build:
       context: ./batch-webservice
       dockerfile: Dockerfile
     environment:
-        - ASPNETCORE_URLS=http://+
+        - ASPNETCORE_URLS=http://+:8040
         - AMQP_URL=amqp://guest:guest@mqtt:5672
     depends_on:
         - mqtt
@@ -39,8 +47,6 @@ services:
     restart: always
     privileged: true
     container_name: websocketservice
-    ports:      
-      - "8010:8010"
     networks:
       - microservice
     environment: 
