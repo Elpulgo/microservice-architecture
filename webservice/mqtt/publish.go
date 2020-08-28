@@ -35,14 +35,3 @@ func (connection *Connection) Publish(message amqp.Publishing, key string) error
 
 	return nil
 }
-
-// PublishBatch will publish a number of messages to MQTT broker in a loop, and wait for confirmation for all messages
-func (connection *Connection) PublishBatch(messages []amqp.Publishing, key string) error {
-	for index, message := range messages {
-		if err := connection.Publish(message, key); err != nil {
-			return fmt.Errorf("Error in Publishing batch, failed on index: %d with error: %s", index, err.Error())
-		}
-	}
-
-	return nil
-}
