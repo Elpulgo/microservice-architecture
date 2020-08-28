@@ -1,0 +1,49 @@
+{
+    "Routes": [
+        {
+            "DownstreamPathTemplate": "/api/batch",
+            "DownstreamScheme": "http",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "batch-webservice",
+                    "Port": 8040
+                }
+            ],
+            "UpstreamPathTemplate": "/api/batch",
+            "UpstreamHttpMethod": [
+                "POST",
+                "OPTIONS",
+                "FETCH",
+                "GET"
+            ]
+        },
+        {
+            "DownstreamPathTemplate": "/api/roundtrip",
+            "DownstreamScheme": "http",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "webservice",
+                    "Port": 8080
+                }
+            ],
+            "UpstreamPathTemplate": "/api/roundtrip",
+            "UpstreamHttpMethod": [
+                "POST",
+                "OPTIONS",
+                "FETCH",
+                "GET"
+            ]
+        },
+        {
+            "DownstreamPathTemplate": "/ws",
+            "DownstreamScheme": "ws",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "websocketservice",
+                    "Port": 8010
+                }
+            ],
+            "UpstreamPathTemplate": "/"
+        }
+    ]   
+}
