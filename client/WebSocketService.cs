@@ -1,13 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
 using System.Text.Json;
 
 namespace client
@@ -16,18 +14,12 @@ namespace client
     {
         private const int BufferSize = 2048;
         private readonly ClientWebSocket m_Websocket;
-        private readonly Uri m_WebsocketUri;
+        public Uri BaseAddress { get; set; }
 
-        public IConfiguration Configuration { get; }
-
-        public WebSocketService(IConfiguration configuration)
+        public WebSocketService()
         {
-            var url = configuration["WebSocketUrl"];
-            Configuration = configuration;
             m_Websocket = new ClientWebSocket();
-            m_WebsocketUri = new Uri(url);
         }
-
 
         public async Task<string> ConnectAsync(CancellationToken cancellationToken)
         {
@@ -35,7 +27,7 @@ namespace client
 
             try
             {
-                await m_Websocket.ConnectAsync(m_WebsocketUri, cancellationToken);
+                await m_Websocket.ConnectAsync(BaseAddress, cancellationToken);
             }
             catch (Exception exception)
             {
