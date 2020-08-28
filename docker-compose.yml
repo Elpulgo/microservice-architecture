@@ -12,14 +12,14 @@ services:
       context: ./api-gateway
       dockerfile: Dockerfile
 
-  webservice:
+  roundtrip-service:
     restart: always
     privileged: true
-    container_name: webservice
+    container_name: roundtrip-service
     networks:
       - microservice
     build:
-      context: ./webservice
+      context: ./roundtrip-service
       dockerfile: Dockerfile
     environment:
       - AMQP_URL=amqp://guest:guest@mqtt:5672
@@ -27,14 +27,14 @@ services:
     depends_on: 
       - mqtt
 
-  batch-webservice:
-    container_name: batch-webservice
+  batch-service:
+    container_name: batch-service
     restart: always
     privileged: true
     networks:
       - microservice
     build:
-      context: ./batch-webservice
+      context: ./batch-service
       dockerfile: Dockerfile
     environment:
         - ASPNETCORE_URLS=http://+:8040
@@ -43,16 +43,16 @@ services:
         - mqtt
         - redis
 
-  websocketservice:
+  websocket-service:
     restart: always
     privileged: true
-    container_name: websocketservice
+    container_name: websocket-service
     networks:
       - microservice
     environment: 
       - AMQP_URL=amqp://guest:guest@mqtt:5672
     build:
-      context: ./websocketservice
+      context: ./websocket-service
       dockerfile: Dockerfile
     depends_on: 
       - mqtt
@@ -69,23 +69,25 @@ services:
       context: ./client
       dockerfile: Dockerfile
     depends_on: 
-      - webservice
+      - roundtrip-service
+      - batch-service
+      - websocket-service
   
-  # service:
-  #   restart: always
-  #   privileged: true
-  #   container_name: service
-  #   networks: 
-  #     - microservice
-  #   build:
-  #     context: ./service
-  #     dockerfile: Dockerfile
-  #   environment: 
-  #     - AMQP_URL=amqp://guest:guest@mqtt:5672
-  #     - REDIS_URL=redis://redis:6379
-  #   depends_on: 
-  #     - mqtt 
-  #     - redis
+  redis-service:
+    restart: always
+    privileged: true
+    container_name: redis-service
+    networks: 
+      - microservice
+    build:
+      context: ./redis-service
+      dockerfile: Dockerfile
+    environment: 
+      - AMQP_URL=amqp://guest:guest@mqtt:5672
+      - REDIS_URL=redis://redis:6379
+    depends_on: 
+      - mqtt 
+      - redis
 
   mqtt:
     image: "rabbitmq:management-alpine"  
