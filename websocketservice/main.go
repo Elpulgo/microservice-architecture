@@ -26,17 +26,11 @@ func main() {
 
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		hub.ServeWs(websocketHub, w, r)
-		testModel := postModel{
-			Key:   "hello",
-			Value: "yeeesh",
-		}
-
-		websocketHub.Broadcast <- testModel.convertToByteArray()
 	})
 
 	consumer.Consume(websocketHub)
 
-	log.Println("Websocket service started, listening on ws://localhost:8010/ws")
+	log.Println("Websocket service started, listening on ws://+:8010/ws")
 
 	err := http.ListenAndServe(*addr, nil)
 	if err != nil {
