@@ -5,7 +5,7 @@
             "DownstreamScheme": "http",
             "DownstreamHostAndPorts": [
                 {
-                    "Host": "batch-webservice",
+                    "Host": "batch-service",
                     "Port": 8040
                 }
             ],
@@ -22,7 +22,7 @@
             "DownstreamScheme": "http",
             "DownstreamHostAndPorts": [
                 {
-                    "Host": "webservice",
+                    "Host": "roundtrip-service",
                     "Port": 8080
                 }
             ],
@@ -39,7 +39,7 @@
             "DownstreamScheme": "ws",
             "DownstreamHostAndPorts": [
                 {
-                    "Host": "websocketservice",
+                    "Host": "websocket-service",
                     "Port": 8010
                 }
             ],
