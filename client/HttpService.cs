@@ -6,23 +6,36 @@ using System.Net.Http.Json;
 
 namespace client
 {
+    public class HttpClientRoundtrip : HttpClient
+    {
+    }
+
+    public class HttpClientBatch : HttpClient
+    {
+    }
+
     public class HttpService
     {
-        private readonly HttpClient m_HttpClient;
+        private readonly HttpClientRoundtrip m_HttpClientRoundtrip;
+        private readonly HttpClientBatch m_HttpClientBatch;
 
-        public HttpService(HttpClient httpClient)
+        public HttpService(
+            HttpClientRoundtrip httpClientRoundtrip,
+            HttpClientBatch httpClientBatch)
         {
-            m_HttpClient = httpClient;
+            m_HttpClientRoundtrip = httpClientRoundtrip;
+            m_HttpClientBatch = httpClientBatch;
         }
 
         public async Task PostAsync(PostModel model)
         {
-            var result =  await m_HttpClient.PostAsJsonAsync("api/roundtrip", model);
+            var result = await m_HttpClientRoundtrip.PostAsJsonAsync("api/roundtrip", model);
             result.EnsureSuccessStatusCode();
         }
 
-        public async Task PostBatchAsync(){
-            var result = await m_HttpClient.PostAsJsonAsync("api/batch", new object());
+        public async Task PostBatchAsync()
+        {
+            var result = await m_HttpClientBatch.PostAsJsonAsync("api/batch", new object());
             result.EnsureSuccessStatusCode();
         }
     }

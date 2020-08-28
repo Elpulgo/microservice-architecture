@@ -1,9 +1,7 @@
 using System;
-using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Configuration;
 
 namespace client
 {
@@ -14,9 +12,15 @@ namespace client
             var builder = WebAssemblyHostBuilder.CreateDefault(args);
             builder.RootComponents.Add<App>("app");
 
-            var httpBaseAddress = builder.Configuration["RestUrl"];
-            Console.WriteLine("Url supposedly is: " + httpBaseAddress);
-            builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(httpBaseAddress) });
+            var httpBaseAddressRoundtrip = builder.Configuration["RestUrlRoundtrip"];
+            var httpBaseAddressBatch = builder.Configuration["RestUrlBatch"];
+
+            Console.WriteLine("Url roundtrip supposedly is: " + httpBaseAddressRoundtrip);
+            Console.WriteLine("Url batch supposedly is: " + httpBaseAddressBatch);
+
+            builder.Services.AddScoped(sp => new HttpClientRoundtrip() { BaseAddress = new Uri(httpBaseAddressRoundtrip) });
+            builder.Services.AddScoped(sp => new HttpClientBatch() { BaseAddress = new Uri(httpBaseAddressBatch) });
+
             builder.Services.AddSingleton<WebSocketService>();
             builder.Services.AddScoped<HttpService>();
 
