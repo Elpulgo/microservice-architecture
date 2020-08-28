@@ -53,6 +53,9 @@
 
     public async Task SendKey()
     {
+        if (string.IsNullOrEmpty(Key) || string.IsNullOrEmpty(Value))
+            return;
+
         KeyValuePairSuccess = false;
         KeyValueException = string.Empty;
         var model = new PostModel(Key, Value);
