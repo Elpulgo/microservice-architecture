@@ -36,3 +36,5 @@ Cargo.lock
 /target
 
 /service/target
+
+**/.vscode
