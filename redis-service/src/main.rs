@@ -7,8 +7,6 @@ use amiquip::{Connection, Result};
 use std::{env, thread};
 
 fn main() -> Result<()> {
-   
-
     // Read amqp url from docker env
     let amqp_url = env::var("AMQP_URL").unwrap();
 
