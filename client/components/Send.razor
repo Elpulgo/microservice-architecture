@@ -2,7 +2,7 @@
 @inject HttpService HttpService
 
 
-<h3>Send a key value pair to execute a roundtrip</h3>
+<h5>Send a key value pair to execute a roundtrip</h5>
 <div class="col-12">
     <label class="d-flex">Key</label>
     <input @bind="@Key" />
@@ -28,8 +28,8 @@
 <client.components.Result></client.components.Result>
 <br>
 <hr>
-<h3>Send a batch of key/value pairs. (Won't execute roundtrip)</h3>
-<button class="btn btn-success" @onclick="@SendBatch">Send batch</button>
+<h5>Send a batch of key/value pairs. (Won't execute roundtrip)</h5>
+<button class="btn btn-success" disabled="@IsBatchSubmitDisabled" @onclick="@SendBatch">Send batch</button>
 
 @if(BatchSuccess){
     <br>
@@ -41,6 +41,30 @@
     <span style="padding-top: 10px; color: red; font-weight: bold;">@BatchException</span>
 }
 
+<br>
+<hr>
+<h5>Batch keys (hash keys) (click to fetch the key/values for the hash key, will be displayed below)</h5>
+<ul>
+    @foreach (var batchKey in BatchKeys)
+    {
+        <li class="batch-key" @onclick="@(() => GetBatchKeyValues(batchKey))">{@batchKey}</li>
+    }
+</ul>
+
+<br>
+<hr>
+<h5>Key values for selected batch (Key/Value)</h5>
+<ul>
+    @foreach (var keyValue in BatchKeyValues)
+    {
+        <li>
+            <span style="color:green;">[@keyValue.Key]</span>
+            <span style="font-weight:bold;"> || </span>
+            <span style="color:red;">[@keyValue.Value]</span> 
+        </li>
+    }
+</ul>
+
 @code{
     private string Key { get; set; }
     private string Value { get; set; }
@@ -49,7 +73,13 @@
     private string BatchException { get; set; }
     private bool BatchSuccess { get; set; }
     private bool KeyValuePairSuccess { get; set; }
+    private bool IsBatchSubmitDisabled { get; set; }
 
+    private List<string> BatchKeys { get; set; } = new List<string>();
+    private List<KeyValueModel> BatchKeyValues { get; set; } = new List<KeyValueModel>();
+
+    protected override async Task OnInitializedAsync()
+        => await GetBatchKeys();
 
     public async Task SendKey()
     {
@@ -79,11 +109,54 @@
     {
         BatchSuccess = false;
         BatchException = string.Empty;
+        IsBatchSubmitDisabled = true;
 
         try
         {
             await HttpService.PostBatchAsync();
             BatchSuccess = true;
+            await GetBatchKeys();
+        }
+        catch (Exception exception)
+        {
+            BatchException = exception.Message;
+        }
+        finally
+        {
+            IsBatchSubmitDisabled = false;
+            StateHasChanged();
+        }
+    }
+
+    public async Task GetBatchKeyValues(string batchKey)
+    {
+        try
+        {
+            var batchKeyValues = await HttpService.GetKeyValuesFromBatch(batchKey);
+            if (batchKeyValues.Any())
+            {
+                BatchKeyValues = batchKeyValues;
+            }
+        }
+        catch (Exception exception)
+        {
+            BatchException = exception.Message;
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+
+    private async Task GetBatchKeys()
+    {
+        try
+        {
+            var batchKeys = await HttpService.GetBatchKeysAsync();
+            if (batchKeys.Any())
+            {
+                BatchKeys = batchKeys;
+            }
         }
         catch (Exception exception)
         {

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Caching.Redis;
 
 namespace batch_webservice
 {
@@ -21,8 +22,10 @@ namespace batch_webservice
                 CorsPolicyName,
                 options => options.AllowAnyOrigin().AllowAnyHeader()));
 
+
             services.AddControllers();
             services.AddSingleton<IRabbitMQClient, RabbitMQClient>();
+            services.AddSingleton<IRedisManager, RedisManager>();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

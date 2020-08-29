@@ -1,6 +1,9 @@
 using System.Threading.Tasks;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Collections.Generic;
+using System;
+using System.Linq;
 
 namespace client
 {
@@ -15,14 +18,28 @@ namespace client
 
         public async Task PostAsync(PostModel model)
         {
-            var result = await m_HttpClient.PostAsJsonAsync("api/roundtrip", model);
-            result.EnsureSuccessStatusCode();
+            var response = await m_HttpClient.PostAsJsonAsync("api/roundtrip", model);
+            response.EnsureSuccessStatusCode();
         }
 
         public async Task PostBatchAsync()
         {
-            var result = await m_HttpClient.PostAsJsonAsync("api/batch", new object());
-            result.EnsureSuccessStatusCode();
+            var response = await m_HttpClient.PostAsJsonAsync("api/batch", new object());
+            response.EnsureSuccessStatusCode();
+        }
+
+        public async Task<List<string>> GetBatchKeysAsync()
+        {
+            var response = await m_HttpClient.GetAsync("api/batch/batchkeys");
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<List<string>>();
+        }
+
+        public async Task<List<KeyValueModel>> GetKeyValuesFromBatch(string batchKey)
+        {
+            var response = await m_HttpClient.GetAsync($"api/batch/batchvalues/{batchKey}");
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<List<KeyValueModel>>();
         }
     }
 }

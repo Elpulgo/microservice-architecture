@@ -6,7 +6,7 @@
     @if(!string.IsNullOrEmpty(ErrorMessageConnect)){
         <div>Failed to connect to Websocket: @ErrorMessageConnect</div>
     }else{
-        <h3>Broadcasted from WebSocketService</h3>
+        <h5>Broadcasted from WebSocketService</h5>
         <div class="col-12">
             Key:<span class="d-flex" style="font-weight:bold; padding-left:10px;">@Model?.Key</span>
             <br>
