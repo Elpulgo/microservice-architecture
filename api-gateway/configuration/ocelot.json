@@ -18,6 +18,23 @@
             ]
         },
         {
+            "DownstreamPathTemplate": "/api/batch/{everything}",
+            "DownstreamScheme": "http",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "batch-service",
+                    "Port": 8040
+                }
+            ],
+            "UpstreamPathTemplate": "/api/batch/{everything}",
+            "UpstreamHttpMethod": [
+                "POST",
+                "OPTIONS",
+                "FETCH",
+                "GET"
+            ]
+        },
+        {
             "DownstreamPathTemplate": "/api/roundtrip",
             "DownstreamScheme": "http",
             "DownstreamHostAndPorts": [
