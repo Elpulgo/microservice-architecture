@@ -16,20 +16,32 @@ namespace batch_webservice
     {
         private const string Pattern = "*";
         private readonly Lazy<ConnectionMultiplexer> m_RedisConnection = new Lazy<ConnectionMultiplexer>(() => OpenConnection());
+        private readonly IPolicyManager m_PolicyManager;
 
-        public RedisManager()
+        public RedisManager(IPolicyManager policyManager)
         {
-
+            m_PolicyManager = policyManager;
         }
 
         public IEnumerable<string> GetAllBatchKeys()
         {
-            var keyScan = GetServer().Keys(pattern: "*");
+            var keyScan = Enumerable.Empty<RedisKey>();
+            IDatabase database = null;
 
-            if (!keyScan.Any())
-                yield break;
+            try
+            {
+                keyScan = GetServer().Keys(pattern: "*");
 
-            var database = m_RedisConnection.Value.GetDatabase();
+                if (!keyScan.Any())
+                    yield break;
+
+                database = GetRedisInstance();
+            }
+            catch (Exception exception)
+            {
+                throw new RedisException(exception.Message);
+            }
+
             var keysWithTypes = keyScan.ToDictionary(key => key.ToString(), key => database.KeyType(key));
 
             foreach (var redisValue in keysWithTypes.Where(kwt => kwt.Value == RedisType.Hash).Select(kwt => kwt.Key).ToList())
@@ -39,17 +51,28 @@ namespace batch_webservice
         }
 
         public async Task<List<Tuple<string, string>>> GetValuesForBatchKey(string hashKey)
-            => (await m_RedisConnection.Value
-                .GetDatabase()
-                .HashGetAllAsync(hashKey))
-                .Select(hashEntry => new Tuple<string, string>(hashEntry.Name.ToString(), hashEntry.Value.ToString()))
-                .ToList();
+        {
+            try
+            {
+                var allHashKeys = await GetRedisInstance().HashGetAllAsync(hashKey);
+                return allHashKeys
+                    .Select(hashEntry => new Tuple<string, string>(hashEntry.Name.ToString(), hashEntry.Value.ToString()))
+                    .ToList();
+            }
+            catch (Exception exception)
+            {
+                throw new RedisException(exception.Message);
+            }
+        }
+
+        private IDatabase GetRedisInstance()
+            => m_PolicyManager.PolicyRedisConnection.Execute(() => m_RedisConnection.Value.GetDatabase());
 
         private static ConnectionMultiplexer OpenConnection()
             => ConnectionMultiplexer.Connect(GetRedisUrl());
 
         private IServer GetServer()
-            => m_RedisConnection.Value.GetServer(GetRedisUrl());
+            => m_PolicyManager.PolicyRedisServer.Execute(() => m_RedisConnection.Value.GetServer(GetRedisUrl()));
 
         private static string GetRedisUrl()
         {
@@ -61,6 +84,14 @@ namespace batch_webservice
             }
 
             return redisUrl;
+        }
+    }
+
+    public class RedisException : Exception
+    {
+        public RedisException(string message) : base(message)
+        {
+
         }
     }
 }
