@@ -44,25 +44,47 @@ namespace batch_webservice.Controllers
         [Route("batchkeys")]
         public IActionResult Get()
         {
-            var batchKeys = m_RedisManager.GetAllBatchKeys();
-            return Ok(batchKeys);
+            try
+            {
+                var batchKeys = m_RedisManager.GetAllBatchKeys();
+                return Ok(batchKeys);
+            }
+            catch (RedisException redisException)
+            {
+                return BadRequest(redisException.Message);
+            }
+            catch (Exception)
+            {
+                return BadRequest($"Failed to get batchkeys ...");
+            }
         }
 
         [HttpGet]
         [Route("batchvalues/{hashKey}")]
         public async Task<IActionResult> GetValuesForBatch(string hashKey)
         {
-            var batchEntries = await m_RedisManager.GetValuesForBatchKey(hashKey);
-
-            var dtoEntries = batchEntries
-            .Select(entry => new KeyValueModel()
+            try
             {
-                Key = entry.Item1,
-                Value = entry.Item2
-            })
-            .ToList();
+                var batchEntries = await m_RedisManager.GetValuesForBatchKey(hashKey);
 
-            return Ok(dtoEntries);
+                var dtoEntries = batchEntries
+                .Select(entry => new KeyValueModel()
+                {
+                    Key = entry.Item1,
+                    Value = entry.Item2
+                })
+                .ToList();
+
+                return Ok(dtoEntries);
+            }
+            catch (RedisException redisException)
+            {
+                return BadRequest(redisException.Message);
+            }
+            catch (Exception)
+            {
+                return BadRequest($"Failed to get values for batch '{hashKey}' ...");
+            }
         }
     }
 

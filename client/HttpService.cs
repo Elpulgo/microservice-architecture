@@ -34,14 +34,22 @@ namespace client
         public async Task<List<string>> GetBatchKeysAsync()
         {
             var response = await m_HttpClient.GetAsync("api/batch/batchkeys");
-            response.EnsureSuccessStatusCode();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception($"Failed to get batch keys: {(await response.Content.ReadAsStringAsync())}");
+            }
+
             return await response.Content.ReadFromJsonAsync<List<string>>();
         }
 
         public async Task<List<KeyValueModel>> GetKeyValuesFromBatch(string batchKey)
         {
             var response = await m_HttpClient.GetAsync($"api/batch/batchvalues/{batchKey}");
-            response.EnsureSuccessStatusCode();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception($"Failed to get value for batch key '{batchKey}': {(await response.Content.ReadAsStringAsync())}");
+            }
+            
             return await response.Content.ReadFromJsonAsync<List<KeyValueModel>>();
         }
     }
