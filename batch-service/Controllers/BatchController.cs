@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -24,8 +25,19 @@ namespace batch_webservice.Controllers
         [HttpPost]
         public IActionResult Post()
         {
-            m_RabbitMQClient.PublishBatch();
-            return Ok();
+            try
+            {
+                m_RabbitMQClient.PublishBatch();
+                return Ok();
+            }
+            catch (RabbitMQException exception)
+            {
+                return BadRequest(exception.Message);
+            }
+            catch (Exception)
+            {
+                return BadRequest("Failed to send batch!");
+            }
         }
 
         [HttpGet]
@@ -44,10 +56,10 @@ namespace batch_webservice.Controllers
 
             var dtoEntries = batchEntries
             .Select(entry => new KeyValueModel()
-                {
-                    Key = entry.Item1,
-                    Value = entry.Item2
-                })
+            {
+                Key = entry.Item1,
+                Value = entry.Item2
+            })
             .ToList();
 
             return Ok(dtoEntries);

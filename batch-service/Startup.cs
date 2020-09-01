@@ -26,6 +26,7 @@ namespace batch_webservice
             services.AddControllers();
             services.AddSingleton<IRabbitMQClient, RabbitMQClient>();
             services.AddSingleton<IRedisManager, RedisManager>();
+            services.AddSingleton<IPolicyManager, PolicyManager>();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

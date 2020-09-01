@@ -25,7 +25,10 @@ namespace client
         public async Task PostBatchAsync()
         {
             var response = await m_HttpClient.PostAsJsonAsync("api/batch", new object());
-            response.EnsureSuccessStatusCode();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception($"Failed to publish batch: {(await response.Content.ReadAsStringAsync())}");
+            }
         }
 
         public async Task<List<string>> GetBatchKeysAsync()
