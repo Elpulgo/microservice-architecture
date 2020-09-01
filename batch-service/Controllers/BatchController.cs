@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -25,66 +24,33 @@ namespace batch_webservice.Controllers
         [HttpPost]
         public IActionResult Post()
         {
-            try
-            {
-                m_RabbitMQClient.PublishBatch();
-                return Ok();
-            }
-            catch (RabbitMQException exception)
-            {
-                return BadRequest(exception.Message);
-            }
-            catch (Exception)
-            {
-                return BadRequest("Failed to send batch!");
-            }
+            m_RabbitMQClient.PublishBatch();
+            return Ok();
         }
 
         [HttpGet]
         [Route("batchkeys")]
         public IActionResult Get()
         {
-            try
-            {
-                var batchKeys = m_RedisManager.GetAllBatchKeys();
-                return Ok(batchKeys);
-            }
-            catch (RedisException redisException)
-            {
-                return BadRequest(redisException.Message);
-            }
-            catch (Exception)
-            {
-                return BadRequest($"Failed to get batchkeys ...");
-            }
+            var batchKeys = m_RedisManager.GetAllBatchKeys();
+            return Ok(batchKeys);
         }
 
         [HttpGet]
         [Route("batchvalues/{hashKey}")]
         public async Task<IActionResult> GetValuesForBatch(string hashKey)
         {
-            try
-            {
-                var batchEntries = await m_RedisManager.GetValuesForBatchKey(hashKey);
+            var batchEntries = await m_RedisManager.GetValuesForBatchKey(hashKey);
 
-                var dtoEntries = batchEntries
-                .Select(entry => new KeyValueModel()
-                {
-                    Key = entry.Item1,
-                    Value = entry.Item2
-                })
-                .ToList();
+            var dtoEntries = batchEntries
+            .Select(entry => new KeyValueModel()
+            {
+                Key = entry.Item1,
+                Value = entry.Item2
+            })
+            .ToList();
 
-                return Ok(dtoEntries);
-            }
-            catch (RedisException redisException)
-            {
-                return BadRequest(redisException.Message);
-            }
-            catch (Exception)
-            {
-                return BadRequest($"Failed to get values for batch '{hashKey}' ...");
-            }
+            return Ok(dtoEntries);
         }
     }
 

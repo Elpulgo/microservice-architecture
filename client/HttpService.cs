@@ -27,7 +27,7 @@ namespace client
             var response = await m_HttpClient.PostAsJsonAsync("api/batch", new object());
             if (!response.IsSuccessStatusCode)
             {
-                throw new Exception($"Failed to publish batch: {(await response.Content.ReadAsStringAsync())}");
+                throw new Exception((await response.Content.ReadAsStringAsync()));
             }
         }
 
@@ -36,7 +36,7 @@ namespace client
             var response = await m_HttpClient.GetAsync("api/batch/batchkeys");
             if (!response.IsSuccessStatusCode)
             {
-                throw new Exception($"Failed to get batch keys: {(await response.Content.ReadAsStringAsync())}");
+                throw new Exception((await response.Content.ReadAsStringAsync()));
             }
 
             return await response.Content.ReadFromJsonAsync<List<string>>();
@@ -47,9 +47,9 @@ namespace client
             var response = await m_HttpClient.GetAsync($"api/batch/batchvalues/{batchKey}");
             if (!response.IsSuccessStatusCode)
             {
-                throw new Exception($"Failed to get value for batch key '{batchKey}': {(await response.Content.ReadAsStringAsync())}");
+                throw new Exception((await response.Content.ReadAsStringAsync()));
             }
-            
+
             return await response.Content.ReadFromJsonAsync<List<KeyValueModel>>();
         }
     }
