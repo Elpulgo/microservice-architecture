@@ -33,6 +33,8 @@ namespace batch_webservice
         {
             app.UseRouting();
             app.UseCors(CorsPolicyName);
+            app.MaintainCorsHeadersOnError();
+            app.UseExceptionHandler(err => err.UseCustomErrors(env));
 
             app.UseEndpoints(endpoints =>
             {

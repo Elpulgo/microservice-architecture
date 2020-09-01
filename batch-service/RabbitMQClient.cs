@@ -65,7 +65,7 @@ namespace batch_webservice
                 catch (Exception circuitException)
                 {
                     Console.WriteLine($"Circuit is open, will abort sending batch! Sent {message} / {BatchSize}. Exception: {circuitException.Message}");
-                    throw new RabbitMQException($"Circuit is open, will abort sending batch! Sent {message} / {BatchSize}. Exception: {circuitException.Message}");
+                    throw new RabbitMQException($"Circuit is open, will abort sending batch! Sent {message} / {BatchSize}: {circuitException.Message}");
                 }
 
                 Console.WriteLine($"Published batch {message} / {BatchSize} ...");

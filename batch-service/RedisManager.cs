@@ -39,7 +39,7 @@ namespace batch_webservice
             }
             catch (Exception exception)
             {
-                throw new RedisException(exception.Message);
+                throw new RedisException($"Failed to get all batch keys: {exception.Message}");
             }
 
             var keysWithTypes = keyScan.ToDictionary(key => key.ToString(), key => database.KeyType(key));
@@ -61,7 +61,7 @@ namespace batch_webservice
             }
             catch (Exception exception)
             {
-                throw new RedisException(exception.Message);
+                throw new RedisException($"Failed to get values for batch key '{hashKey}': {exception.Message}");
             }
         }
 

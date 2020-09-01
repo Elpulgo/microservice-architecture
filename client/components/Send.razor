@@ -1,4 +1,5 @@
 @using System
+@using System.Text.Json
 @inject HttpService HttpService
 
 
@@ -38,7 +39,9 @@
 
 @if(!string.IsNullOrEmpty(BatchException)){
     <br>
-    <span style="padding-top: 10px; color: red; font-weight: bold;">@BatchException</span>
+    <pre style="color: red;">
+        @((MarkupString)BatchException)
+    </pre>
 }
 
 <br>
@@ -114,12 +117,12 @@
         try
         {
             await HttpService.PostBatchAsync();
-            BatchSuccess = true;
             await GetBatchKeys();
+            BatchSuccess = true;
         }
         catch (Exception exception)
-        {
-            BatchException = exception.Message;
+        {              
+            SetBatchException(exception);
         }
         finally
         {
@@ -140,7 +143,7 @@
         }
         catch (Exception exception)
         {
-            BatchException = exception.Message;
+            SetBatchException(exception);
         }
         finally
         {
@@ -160,11 +163,37 @@
         }
         catch (Exception exception)
         {
-            BatchException = exception.Message;
+            SetBatchException(exception);
         }
         finally
         {
             StateHasChanged();
+        }
+    }
+  
+    private void SetBatchException(Exception exception)
+    {
+        try
+        {
+            var problemDetails = JsonSerializer.Deserialize<ProblemDetails>(
+                exception.Message,
+                new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                });
+
+            var message = JsonSerializer.Serialize<ProblemDetails>(
+                problemDetails,
+                new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                });
+
+            BatchException = message;
+        }
+        catch (Exception)
+        {
+            BatchException = "Failed to serialize exception!";
         }
     }
 }
