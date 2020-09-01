@@ -3,12 +3,7 @@
         {
             "DownstreamPathTemplate": "/api/batch",
             "DownstreamScheme": "http",
-            "DownstreamHostAndPorts": [
-                {
-                    "Host": "batch-service",
-                    "Port": 8040
-                }
-            ],
+            "ServiceName": "batch-service",
             "UpstreamPathTemplate": "/api/batch",
             "UpstreamHttpMethod": [
                 "POST",
@@ -20,12 +15,7 @@
         {
             "DownstreamPathTemplate": "/api/batch/{everything}",
             "DownstreamScheme": "http",
-            "DownstreamHostAndPorts": [
-                {
-                    "Host": "batch-service",
-                    "Port": 8040
-                }
-            ],
+            "ServiceName": "batch-service",
             "UpstreamPathTemplate": "/api/batch/{everything}",
             "UpstreamHttpMethod": [
                 "POST",
@@ -62,5 +52,12 @@
             ],
             "UpstreamPathTemplate": "/"
         }
-    ]   
+    ],
+    "GlobalConfiguration": {
+        "ServiceDiscoveryprovider":{
+            "Host": "consul",
+            "Port": 8500,
+            "Type": "Consul"
+        }
+    }
 }
