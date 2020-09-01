@@ -1,6 +1,8 @@
 using System;
 using RabbitMQ.Client;
 using System.Linq;
+using Polly.CircuitBreaker;
+using System.Threading;
 
 namespace batch_webservice
 {
@@ -14,16 +16,30 @@ namespace batch_webservice
         private const int BatchSize = 500;
         private const string ExchangeName = "exchange_batch";
         private const string QueueName = "batch";
-        private readonly Lazy<IModel> m_Channel = new Lazy<IModel>(() => CreateChannel());
+        private readonly Lazy<IModel> m_Channel = new Lazy<IModel>(() => Connect());
+        private readonly IPolicyManager m_PolicyManager;
 
-        public RabbitMQClient()
+        public RabbitMQClient(IPolicyManager policyManager)
         {
-
+            m_PolicyManager = policyManager;
         }
 
         public void PublishBatch()
         {
             var hashKey = Guid.NewGuid();
+
+            if (m_Channel.Value.IsClosed)
+            {
+                Console.WriteLine("Channel is closed, won't send batch ...");
+                throw new RabbitMQException("MQTT channel is closed!");
+            }
+
+            if (m_PolicyManager.PolicyRabbitMQPublish.CircuitState == CircuitState.Open ||
+                m_PolicyManager.PolicyRabbitMQPublish.CircuitState == CircuitState.Isolated)
+            {
+                Console.WriteLine("Circuit is open, won't send batch ...");
+                throw new RabbitMQException("Circuit is open or isolated, won't try and send batch!");
+            }
 
             foreach (var message in Enumerable.Range(0, BatchSize))
             {
@@ -38,24 +54,25 @@ namespace batch_webservice
                 props.DeliveryMode = 2;
                 props.ContentType = "application/json";
 
-                m_Channel.Value.BasicPublish(
-                    exchange: ExchangeName,
-                    routingKey: QueueName,
-                    basicProperties: props,
-                    body: body);
+                try
+                {
+                    m_PolicyManager.PolicyRabbitMQPublish.Execute(() => m_Channel.Value.BasicPublish(
+                            exchange: ExchangeName,
+                            routingKey: QueueName,
+                            basicProperties: props,
+                            body: body));
+                }
+                catch (Exception circuitException)
+                {
+                    Console.WriteLine($"Circuit is open, will abort sending batch! Sent {message} / {BatchSize}. Exception: {circuitException.Message}");
+                    throw new RabbitMQException($"Circuit is open, will abort sending batch! Sent {message} / {BatchSize}. Exception: {circuitException.Message}");
+                }
 
                 Console.WriteLine($"Published batch {message} / {BatchSize} ...");
             }
         }
 
-        private static IModel CreateChannel()
-        {
-            var channel = Connect().CreateModel();
-            SetupRoutes(channel);
-            return channel;
-        }
-
-        private static IConnection Connect()
+        private static IModel Connect()
         {
             int maxConnectionRetries = 20;
             int connectionRetries = 0;
@@ -66,7 +83,9 @@ namespace batch_webservice
                 {
                     var connection = new ConnectionFactory() { HostName = "mqtt", Port = 5672 }.CreateConnection();
                     Console.WriteLine("Successfully connected to MQTT broker!");
-                    return connection;
+                    var channel = connection.CreateModel();
+                    SetupRoutes(channel);
+                    return channel;
                 }
                 catch (RabbitMQ.Client.Exceptions.BrokerUnreachableException)
                 {
@@ -107,6 +126,8 @@ namespace batch_webservice
                 queue.QueueName,
                 null
             );
+
+            Console.WriteLine("Successfully setup and bind queues/exchanges!");
         }
 
 
@@ -116,6 +137,14 @@ namespace batch_webservice
                 return;
 
             m_Channel.Value.Close();
+        }
+    }
+
+    public class RabbitMQException : Exception
+    {
+        public RabbitMQException(string message) : base(message)
+        {
+
         }
     }
 }
