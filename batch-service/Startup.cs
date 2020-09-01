@@ -22,7 +22,7 @@ namespace batch_webservice
                 CorsPolicyName,
                 options => options.AllowAnyOrigin().AllowAnyHeader()));
 
-
+            services.RegisterServiceDiscovery(Configuration.GetServiceConfig());
             services.AddControllers();
             services.AddSingleton<IRabbitMQClient, RabbitMQClient>();
             services.AddSingleton<IRedisManager, RedisManager>();

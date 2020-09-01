@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Ocelot.DependencyInjection;
 using Ocelot.Middleware;
+using Ocelot.Provider.Consul;
 
 namespace api_gateway
 {
@@ -24,7 +25,7 @@ namespace api_gateway
                CorsPolicyName,
                options => options.AllowAnyOrigin().AllowAnyHeader()));
 
-            services.AddOcelot();
+            services.AddOcelot().AddConsul();
             services.AddControllers();
         }
 

@@ -37,9 +37,14 @@ services:
         - ASPNETCORE_URLS=http://+:8040
         - AMQP_URL=amqp://guest:guest@mqtt:5672
         - REDIS_URL=redis:6379
+        - ServiceConfig__serviceDiscoveryAddress=http://consul:8500
+        - ServiceConfig__serviceAddress=http://batch-service:8040
+        - ServiceConfig__serviceName=batch-service
+        - ServiceConfig__serviceId=batch-service-v1
     depends_on:
         - mqtt
         - redis
+        - consul
   
   websocket-service:
     restart: always
@@ -100,6 +105,16 @@ services:
     command: redis-server --appendonly yes
     volumes:
       - ~/redis-data:/data
+    networks: 
+      - microservice
+
+  consul:
+    image: consul:latest
+    container_name: consul
+    command: consul agent -dev -log-level=warn -ui -client=0.0.0.0
+    hostname: consul
+    ports:
+      - "8500"
     networks: 
       - microservice
   
