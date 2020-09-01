@@ -2,7 +2,6 @@ version: '3.5'
 services:
   api-gateway:
     restart: always
-    privileged: true
     container_name: api-gateway
     ports:
       - "5001:80"
@@ -14,7 +13,6 @@ services:
 
   roundtrip-service:
     restart: always
-    privileged: true
     container_name: roundtrip-service
     networks:
       - microservice
@@ -30,7 +28,6 @@ services:
   batch-service:
     container_name: batch-service
     restart: always
-    privileged: true
     networks:
       - microservice
     build:
@@ -46,7 +43,6 @@ services:
   
   websocket-service:
     restart: always
-    privileged: true
     container_name: websocket-service
     networks:
       - microservice
@@ -60,7 +56,6 @@ services:
   
   client:
     restart: always
-    privileged: true  
     container_name: client
     ports:      
       - "5000:80"
@@ -76,7 +71,6 @@ services:
   
   redis-service:
     restart: always
-    privileged: true
     container_name: redis-service
     networks: 
       - microservice
@@ -94,15 +88,15 @@ services:
     image: "rabbitmq:management-alpine"  
     container_name: mqtt
     restart: always
-    privileged: true
     networks:
       - microservice
+    #ports: 
+    #  - "15672:15672"
 
   redis:
     image: "redis:6-alpine"
     container_name: redis
     restart: always
-    privileged: true
     command: redis-server --appendonly yes
     volumes:
       - ~/redis-data:/data
