@@ -10,8 +10,12 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"websocketservice/hub"
 	"websocketservice/mqtt"
+
+	serviceregistration "github.com/elpulgo/microservice-architecture/shared/go-shared"
 )
 
 var addr = flag.String("addr", ":8010", "http websocket service address")
@@ -29,6 +33,21 @@ func main() {
 	})
 
 	consumer.Consume(websocketHub)
+
+	consulAgent := serviceregistration.RegisterServiceWithConsul()
+
+	idleChan := make(chan struct{})
+
+	go func() {
+		// Handle sigterm and await termChan signal
+		termChan := make(chan os.Signal, 1)
+		signal.Notify(termChan, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+		term := <-termChan // Blocks here until interrupted
+
+		log.Println("Shutdown: ", term)
+		serviceregistration.UnregisterServiceWithConsul(consulAgent)
+		close(idleChan)
+	}()
 
 	log.Println("Websocket service started, listening on ws://+:8010/ws")
 

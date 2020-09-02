@@ -39,12 +39,7 @@
         {
             "DownstreamPathTemplate": "/ws",
             "DownstreamScheme": "ws",
-            "DownstreamHostAndPorts": [
-                {
-                    "Host": "websocket-service",
-                    "Port": 8010
-                }
-            ],
+            "ServiceName": "websocket-service",
             "UpstreamPathTemplate": "/"
         }
     ],
