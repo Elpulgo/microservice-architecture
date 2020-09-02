@@ -6,7 +6,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
 	"webservice/mqtt"
 
 	"github.com/streadway/amqp"
@@ -46,6 +48,21 @@ func main() {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 	})
+
+	consulAgent := RegisterServiceWithConsul()
+
+	idleChan := make(chan struct{})
+
+	go func() {
+		// Handle sigterm and await termChan signal
+		termChan := make(chan os.Signal, 1)
+		signal.Notify(termChan, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+		term := <-termChan // Blocks here until interrupted
+
+		log.Println("Shutdown: ", term)
+		UnregisterServiceWithConsul(consulAgent)
+		close(idleChan)
+	}()
 
 	log.Println("Webservice started, listening on http://+:8080")
 
