@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"webservice/mqtt"
 
+	serviceregistration "github.com/elpulgo/microservice-architecture/shared/go-shared"
 	"github.com/streadway/amqp"
 )
 
@@ -49,7 +50,7 @@ func main() {
 		}
 	})
 
-	consulAgent := RegisterServiceWithConsul()
+	consulAgent := serviceregistration.RegisterServiceWithConsul()
 
 	idleChan := make(chan struct{})
 
@@ -60,7 +61,7 @@ func main() {
 		term := <-termChan // Blocks here until interrupted
 
 		log.Println("Shutdown: ", term)
-		UnregisterServiceWithConsul(consulAgent)
+		serviceregistration.UnregisterServiceWithConsul(consulAgent)
 		close(idleChan)
 	}()
 
