@@ -27,12 +27,7 @@
         {
             "DownstreamPathTemplate": "/api/roundtrip",
             "DownstreamScheme": "http",
-            "DownstreamHostAndPorts": [
-                {
-                    "Host": "roundtrip-service",
-                    "Port": 8080
-                }
-            ],
+            "ServiceName": "roundtrip-service",
             "UpstreamPathTemplate": "/api/roundtrip",
             "UpstreamHttpMethod": [
                 "POST",

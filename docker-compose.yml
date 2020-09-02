@@ -22,8 +22,13 @@ services:
     environment:
       - AMQP_URL=amqp://guest:guest@mqtt:5672
       - BATCH_SIZE=500
+      - ServiceDiscoveryAddress=http://consul:8500
+      - ServiceAddress=http://roundtrip-service:8080
+      - ServiceName=roundtrip-service
+      - ServiceId=roundtrip-service-v1
     depends_on: 
       - mqtt
+      - consul
   
   batch-service:
     container_name: batch-service
