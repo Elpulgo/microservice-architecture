@@ -1,4 +1,4 @@
-module shared/go-shared
+module github.com/elpulgo/microservice-architecture/shared/go-shared
 
 go 1.14
 
