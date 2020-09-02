@@ -58,6 +58,10 @@ services:
       - microservice
     environment: 
       - AMQP_URL=amqp://guest:guest@mqtt:5672
+      - ServiceDiscoveryAddress=http://consul:8500
+      - ServiceAddress=http://websocket-service:8010
+      - ServiceName=websocket-service
+      - ServiceId=websocket-service-v1
     build:
       context: ./websocket-service
       dockerfile: Dockerfile
