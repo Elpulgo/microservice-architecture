@@ -1,4 +1,5 @@
 use redis::{self, Client, Connection, RedisResult};
+use crate::mqtt_message::Batch;
 
 use std::cell::RefCell;
 use std::env;
@@ -37,6 +38,20 @@ pub fn set_hash(hash_key: &str, key: &str, value: &str) -> RedisResult<()> {
     });
 
     return Ok(result);
+}
+
+pub fn set_hash_all(key: String, batches: Vec<Batch>) -> RedisResult<()> {
+
+    let keys = batches.into_iter();
+    let result: () = REDIS_CONNECTION.with(| redis_connection_cell| {
+        let mut con = redis_connection_cell.borrow_mut();
+
+        // redis::transaction(&mut *con, &[batches], |pipe|{
+
+        // });
+    });
+
+    return Ok(());
 }
 
 fn connect() -> RedisResult<Connection> {
