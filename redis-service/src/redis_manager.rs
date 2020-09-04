@@ -40,7 +40,7 @@ pub fn set_hash(hash_key: &str, key: &str, value: &str) -> RedisResult<()> {
     return Ok(result);
 }
 
-pub fn set_hash_all(key: String, batches: Vec<Batch>) -> RedisResult<()> {
+pub fn set_hash_all(key: String, batches: &Vec<Batch>) -> RedisResult<()> {
 
     let keys = batches.into_iter();
     let result: () = REDIS_CONNECTION.with(| redis_connection_cell| {
