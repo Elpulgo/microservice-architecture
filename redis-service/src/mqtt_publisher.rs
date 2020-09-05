@@ -1,37 +1,32 @@
-use crate::mqtt_message::RoundTrip;
+use serde::export::fmt::Debug;
 
-const QUEUE_NAME: &str = "forward_roundtrip";
-const ROUTING_KEY: &str = "forward_roundtrip";
-const EXCHANGE_NAME: &str = "exchange_forward_roundtrip";
-
-pub fn publish(
+pub fn publish<T: serde::Serialize + Debug>(
     exchange: &amiquip::Exchange,
-    roundtrip: &RoundTrip,
+    routing_key: &str,
+    message: T,
 ) -> Result<(), String> {
-
-    let bytes = serde_json::to_vec(&roundtrip).unwrap();
-
-    match exchange.publish(amiquip::Publish::new(&bytes, ROUTING_KEY)) {
+    let bytes = serde_json::to_vec(&message).unwrap();
+    match exchange.publish(amiquip::Publish::new(&bytes, routing_key)) {
         Ok(result) => {
-            println!(
-                "Successfully forwarded roundtrip key/value: {:?}",
-                &roundtrip
-            );
             return Ok(result);
         }
         Err(err) => {
-            println!("Failed to forward roundtrip key/value!: {}", err);
-            return Err(String::from("Failed to forward roundtrip!"));
+            return Err(String::from(format!(
+                "Failed to publish message: {:?}, {}",
+                message, err
+            )));
         }
     }
 }
 
 pub fn bind_exchange_queue<'a>(
     channel: &'a amiquip::Channel,
+    exchange_name: &str,
+    queue_name: &str,
 ) -> Result<amiquip::Exchange<'a>, amiquip::Error> {
     let roundtrip_exchange = match channel.exchange_declare(
         amiquip::ExchangeType::Direct,
-        EXCHANGE_NAME,
+        exchange_name,
         amiquip::ExchangeDeclareOptions::default(),
     ) {
         Ok(exchange) => exchange,
@@ -41,7 +36,7 @@ pub fn bind_exchange_queue<'a>(
         }
     };
 
-    match channel.queue_declare(QUEUE_NAME, amiquip::QueueDeclareOptions::default()) {
+    match channel.queue_declare(queue_name, amiquip::QueueDeclareOptions::default()) {
         Ok(queue) => {
             println!("Queue '{}' was declared!", queue.name());
 
