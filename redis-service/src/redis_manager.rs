@@ -1,6 +1,5 @@
+use crate::mqtt_message::{Batch, KeyValue};
 use redis::{self, Client, Connection, RedisResult};
-use crate::mqtt_message::Batch;
-
 use std::cell::RefCell;
 use std::env;
 use std::{thread, thread_local, time};
@@ -28,6 +27,7 @@ pub fn set(key: &str, value: &str) -> RedisResult<()> {
 pub fn set_hash(hash_key: &str, key: &str, value: &str) -> RedisResult<()> {
     let result: () = REDIS_CONNECTION.with(|redis_connection_cell| {
         let mut con = redis_connection_cell.borrow_mut();
+
         let result = redis::cmd("HSET")
             .arg(hash_key)
             .arg(key)
@@ -41,17 +41,39 @@ pub fn set_hash(hash_key: &str, key: &str, value: &str) -> RedisResult<()> {
 }
 
 pub fn set_hash_all(key: String, batches: &Vec<Batch>) -> RedisResult<()> {
+    let keys: Vec<String> = batches
+        .into_iter()
+        .map(|x| String::from(format!("{}:{}", key, x.key())).to_owned())
+        .collect();
 
-    let keys = batches.into_iter();
-    let result: () = REDIS_CONNECTION.with(| redis_connection_cell| {
+    let mut values: Vec<(String, String, String)> = batches
+        .into_iter()
+        .map(|x| {
+            (
+                String::from(&key),
+                String::from(x.key()),
+                String::from(x.value()),
+            )
+        })
+        .collect();
+
+    REDIS_CONNECTION.with(|redis_connection_cell| {
         let mut con = redis_connection_cell.borrow_mut();
 
-        // redis::transaction(&mut *con, &[batches], |pipe|{
+        redis::transaction(&mut *con, &[keys], |con, pipe| {
+            for value in values.iter_mut() {
+                pipe.cmd("HSET")
+                    .arg(&value.0)
+                    .arg(&value.1)
+                    .arg(&value.2)
+                    .ignore();
+            }
 
-        // });
-    });
+            pipe.query(con)?;
 
-    return Ok(());
+            return Ok(Some(()));
+        })
+    })
 }
 
 fn connect() -> RedisResult<Connection> {
