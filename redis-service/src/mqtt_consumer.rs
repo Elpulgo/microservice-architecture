@@ -1,3 +1,4 @@
+use crate::batch_processor::BatchProcessor;
 use crate::mqtt_message::{Batch, KeyValue, RoundTrip};
 use crate::mqtt_publisher::publish;
 use crate::redis_manager;
@@ -34,8 +35,10 @@ pub fn consume_roundtrip(
                 match handle_roundtrip(&body, &delivery) {
                     Ok(roundtrip) => {
                         consumer.ack(delivery)?;
-                        match publish(&publish_forward_exchange, &roundtrip) {
-                            _ => continue,
+                        let bytes = serde_json::to_vec(&roundtrip).unwrap();
+                        match publish(&publish_forward_exchange, "forward_roundtrip", bytes) {
+                            Ok(_) => continue,
+                            Err(err) => println!("{}", err),
                         }
                     }
                     Err(_) => consumer.reject(delivery, false)?,
@@ -55,7 +58,11 @@ pub fn consume_roundtrip(
     return Ok(());
 }
 
-pub fn consume_batch(channel: &amiquip::Channel) -> amiquip::Result<()> {
+pub fn consume_batch(
+    channel: &amiquip::Channel,
+    reply_exchange: &amiquip::Exchange,
+    mut batch_processor: BatchProcessor,
+) -> amiquip::Result<()> {
     let queue = channel.queue_declare(CONSUME_BATCH_QUEUE_NAME, QueueDeclareOptions::default())?;
     println!("Queue '{}' was declared!", CONSUME_BATCH_QUEUE_NAME);
 
@@ -70,11 +77,10 @@ pub fn consume_batch(channel: &amiquip::Channel) -> amiquip::Result<()> {
         match message {
             ConsumerMessage::Delivery(delivery) => {
                 let body = String::from_utf8_lossy(&delivery.body);
+                let batch = serde_json::from_str::<Batch>(&body).unwrap();
 
-                match handle_batch(&body, &delivery) {
-                    Ok(_) => consumer.ack(delivery)?,
-                    Err(_) => consumer.reject(delivery, false)?,
-                }
+                batch_processor.add_batch(batch, reply_exchange);
+                consumer.ack(delivery)?
             }
             ConsumerMessage::ClientCancelled => {
                 println!("Client cancelled");
@@ -147,30 +153,6 @@ fn handle_roundtrip(body: &str, delivery: &Delivery) -> Result<RoundTrip, String
                 &body, err
             );
             return Err(String::from("Failed to parse roundtrip value!"));
-        }
-    }
-}
-
-fn handle_batch(body: &str, delivery: &Delivery) -> Result<(), String> {
-    match serde_json::from_str::<Batch>(&body) {
-        Ok(batch) => match redis_manager::set_hash(&batch.hash_key(), &batch.key(), &batch.value())
-        {
-            Ok(_) => {
-                println!(
-                    "('{}') Received BATCH and stored in redis [{:?}]",
-                    delivery.delivery_tag(),
-                    batch
-                );
-                return Ok(());
-            }
-            Err(err) => {
-                println!("Failed to store BATCH key/value in redis: {}", err);
-                return Err(String::from("Failed to set value in redis!"));
-            }
-        },
-        Err(err) => {
-            println!("Failed to parse batch value: {:?}, error: {}", &body, err);
-            return Err(String::from("Failed to parse batch value!"));
         }
     }
 }

@@ -1,6 +1,10 @@
 use crate::mqtt_message::Batch;
 use crate::redis_manager;
+use crate::mqtt_publisher;
 use std::collections::hash_map::{Entry, HashMap};
+use serde::{Deserialize, Serialize};
+
+const BATCH_REPLY_ROUTING_KEY: &str = "batch_reply";
 
 pub struct BatchProcessor {
     batch_handler_map: HashMap<String, BatchHandler>,
@@ -14,7 +18,7 @@ pub struct BatchHandler {
     pub batches: Vec<Batch>,
 }
 
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Copy, Clone, Serialize, Deserialize)]
 pub enum BatchStatus {
     PendingConsume = 0,
     PendingDatabase = 1,
@@ -22,6 +26,13 @@ pub enum BatchStatus {
     Invalid = 3,
     TimeoutExceeded = 4,
     Done = 5,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
+pub struct BatchReply {
+    pub status: BatchStatus,
+    pub key: String
 }
 
 impl BatchProcessor {
@@ -44,7 +55,7 @@ impl BatchProcessor {
     }
     // END DEBUG!!!
 
-    pub fn add_batch(&mut self, batch: Batch) {
+    pub fn add_batch(&mut self, batch: Batch, reply_exchange: &amiquip::Exchange) {
         self.dispose_non_pending_batch_handlers();
 
         let key = &batch.hash_key().to_string();
@@ -59,7 +70,7 @@ impl BatchProcessor {
                 if entry.get_mut().is_timeout_exceeded() {
                     println!("Batch with key '{}' reached timeout!", key);
                     self.dispose_batch_handler(key);
-                // Publish to MQTT with status TimeoutExceeded
+                    self.publish_batch_reply(reply_exchange, BatchStatus::TimeoutExceeded, key);
                 } else {
                     match batch.is_last_in_batch() {
                         true => {
@@ -80,14 +91,14 @@ impl BatchProcessor {
                                                 key
                                             );
                                             self.dispose_batch_handler(key);
-                                            // Publish to MQTT with status Done
+                                            self.publish_batch_reply(reply_exchange, BatchStatus::Done, key);
                                         }
                                         Err(err) => {
                                             println!(
                                                 "Failed to add batch with key '{}'to Redis: {}",
                                                 key, err
                                             );
-                                            // Publish to MQTT with status DatabaseOperationFailed
+                                            self.publish_batch_reply(reply_exchange, BatchStatus::DatabaseOperationFailed, key);
                                         }
                                     }
                                 }
@@ -98,7 +109,7 @@ impl BatchProcessor {
                                         entry.get().batches.len());
                                     entry.get_mut().change_status(BatchStatus::Invalid);
                                     self.dispose_batch_handler(key);
-                                    // Publish to MQTT with status Invalid
+                                    self.publish_batch_reply(reply_exchange, BatchStatus::Invalid, key);
                                 }
                             }
                         }
@@ -121,6 +132,23 @@ impl BatchProcessor {
             value.status == BatchStatus::PendingConsume
                 || value.status == BatchStatus::PendingDatabase
         });
+    }
+
+    fn publish_batch_reply(
+        &mut self, 
+        reply_exchange: &amiquip::Exchange, 
+        status: BatchStatus, 
+        key: &str) {
+        match mqtt_publisher::publish(
+            reply_exchange, 
+            BATCH_REPLY_ROUTING_KEY,
+            BatchReply { 
+                status: status, 
+                key: String::from(key) 
+        }){
+            Ok(_) => {},
+            Err(err) => println!("{}", err)
+        }
     }
 }
 
