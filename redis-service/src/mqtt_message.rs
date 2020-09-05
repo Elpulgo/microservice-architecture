@@ -10,10 +10,10 @@ pub struct RoundTrip {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
 pub struct Batch {
-    // FOR DEBUG!!! REMOVE pub!!!
     pub hash_key: String,
     pub key: String,
     pub value: String,
+    pub batch_size: usize,
     pub is_last_in_batch: bool,
 }
 
