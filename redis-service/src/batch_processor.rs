@@ -16,10 +16,12 @@ pub struct BatchHandler {
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum BatchStatus {
-    PendingConsume,
-    PendingDatabase,
-    Invalid,
-    Done,
+    PendingConsume = 0,
+    PendingDatabase = 1,
+    DatabaseOperationFailed = 2,
+    Invalid = 3,
+    TimeoutExceeded = 4,
+    Done = 5,
 }
 
 impl BatchProcessor {
@@ -31,6 +33,11 @@ impl BatchProcessor {
 
     // FOR DEBUGGING PURPOSES!!
     pub fn print(&mut self) {
+        if self.batch_handler_map.len() == 0 {
+            println!("Nothing to print, map is empty!");
+            return;
+        }
+
         for (key, value) in self.batch_handler_map.iter_mut() {
             println!("{} / {:?}", key, value);
         }
@@ -41,7 +48,6 @@ impl BatchProcessor {
         self.dispose_non_pending_batch_handlers();
 
         let key = &batch.hash_key().to_string();
-        let mut timeout_exceeded = false;
 
         match self.batch_handler_map.entry(String::from(key)) {
             Entry::Vacant(entry) => {
@@ -50,56 +56,63 @@ impl BatchProcessor {
                 entry.insert(batch_handler);
             }
             Entry::Occupied(mut entry) => {
-                match entry.get_mut().is_timeout_exceeded() {
-                    true => timeout_exceeded = true,
-                    false => {
-                        match batch.is_last_in_batch() {
-                            true => {
-                                let batch_size = batch.batch_size;
-                                entry.get_mut().add_batch_value(batch);
-                                match batch_size == entry.get().batches.len() {
-                                    true => {
-                                        println!("Should update status to PendingDatabase and do redis insert..");
-                                        entry.get_mut().change_status(BatchStatus::PendingDatabase);
-                                        let ref_batches = &entry.into_mut().batches;
-                                        match redis_manager::set_hash_all(
-                                            String::from(key),
-                                            ref_batches,
-                                        ) {
-                                            Ok(res) => {}
-                                            Err(err) => {}
+                if entry.get_mut().is_timeout_exceeded() {
+                    println!("Batch with key '{}' reached timeout!", key);
+                    self.dispose_batch_handler(key);
+                // Publish to MQTT with status TimeoutExceeded
+                } else {
+                    match batch.is_last_in_batch() {
+                        true => {
+                            let batch_size = batch.batch_size;
+                            entry.get_mut().add_batch_value(batch);
+
+                            match batch_size == entry.get().batches.len() {
+                                true => {
+                                    entry.get_mut().change_status(BatchStatus::PendingDatabase);
+                                    let ref_batches = &entry.into_mut().batches;
+                                    match redis_manager::set_hash_all(
+                                        String::from(key),
+                                        ref_batches,
+                                    ) {
+                                        Ok(_res) => {
+                                            println!(
+                                                "Successfully added batch with key '{}' to Redis!",
+                                                key
+                                            );
+                                            self.dispose_batch_handler(key);
+                                            // Publish to MQTT with status Done
                                         }
-                                        // perform transaction to Redis and publish success to mqtt!
-                                    }
-                                    false => {
-                                        println!("Last in batch with key '{}' but not correct batch size of '{}'. Will dispose batch!", key, batch_size);
-                                        entry.get_mut().change_status(BatchStatus::Invalid);
-                                        // publish to mqtt that this is wrong!
+                                        Err(err) => {
+                                            println!(
+                                                "Failed to add batch with key '{}'to Redis: {}",
+                                                key, err
+                                            );
+                                            // Publish to MQTT with status DatabaseOperationFailed
+                                        }
                                     }
                                 }
+                                false => {
+                                    println!("Last in batch with key '{}', but not correct batch size, need '{}' but found '{}'!", 
+                                        key, 
+                                        batch_size, 
+                                        entry.get().batches.len());
+                                    entry.get_mut().change_status(BatchStatus::Invalid);
+                                    self.dispose_batch_handler(key);
+                                    // Publish to MQTT with status Invalid
+                                }
                             }
-                            false => {
-                                entry.get_mut().add_batch_value(batch);
-                            }
+                        }
+                        false => {
+                            entry.get_mut().add_batch_value(batch);
                         }
                     }
                 }
             }
         };
-
-        if !timeout_exceeded {
-            return;
-        }
-        
-        // Publish to MQTT that timeout happened..
-        self.dispose_batch_handler(key);
     }
 
     fn dispose_batch_handler(&mut self, key: &String) {
-        println!(
-            "Batch with key '{}' exceeded timeout limit, and will be disposed!",
-            key
-        );
+        println!("Batch with key '{}' will be disposed!", key);
         self.batch_handler_map.remove_entry(key);
     }
 
