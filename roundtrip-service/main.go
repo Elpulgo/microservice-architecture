@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 	"webservice/mqtt"
 
@@ -19,17 +18,9 @@ var addr = flag.String("addr", ":8080", "http service address")
 var exchangeName = flag.String("exchange", "exchange_events", "Name for MQTT exchange")
 var roundTripQueueName = flag.String("roundTripQueue", "events", "Name of the MQTT queue to publish roundtrip messages to")
 var connectionName = flag.String("connection", "event_producer", "Name of the MQTT connection")
-var batchSize = 100
 
 func main() {
 	flag.Parse()
-	size, err := strconv.Atoi(os.Getenv("BATCH_SIZE"))
-	if err != nil {
-		batchSize = 100
-		log.Println("Failed to set BATCH_SIZE from env variable, will default to 100")
-	} else {
-		batchSize = size
-	}
 
 	connection := initMQTTConnection()
 
@@ -67,7 +58,7 @@ func main() {
 
 	log.Println("Webservice started, listening on http://+:8080")
 
-	err = http.ListenAndServe(*addr, enableCors(http.DefaultServeMux))
+	err := http.ListenAndServe(*addr, enableCors(http.DefaultServeMux))
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 		os.Exit(1)
