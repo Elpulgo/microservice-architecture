@@ -1,8 +1,6 @@
 using System;
 using RabbitMQ.Client;
-using System.Linq;
 using Polly.CircuitBreaker;
-using System.Threading;
 
 namespace batch_webservice
 {
@@ -13,7 +11,7 @@ namespace batch_webservice
 
     public class RabbitMQClient : IDisposable, IRabbitMQClient
     {
-        private const int BatchSize = 500;
+        private const int BatchSize = 100;
         private const string ExchangeName = "exchange_batch";
         private const string QueueName = "batch";
         private readonly Lazy<IModel> m_Channel = new Lazy<IModel>(() => Connect());
@@ -41,14 +39,16 @@ namespace batch_webservice
                 throw new RabbitMQException("Circuit is open or isolated, won't try and send batch!");
             }
 
-            foreach (var message in Enumerable.Range(0, BatchSize))
+            for (var index = 1; index <= BatchSize; index++)
             {
-                var batch = new Batch(
+                var batchByteArray = new Batch(
                     hashKey: hashKey,
-                    key: $"{hashKey}_key_{message}",
-                    value: $"{hashKey}_value_{message}");
+                    key: $"{hashKey}_key_{index}",
+                    value: $"{hashKey}_value_{index}",
+                    batchSize: BatchSize,
+                    isLastInBatch: index == BatchSize)
+                    .ToByteArray();
 
-                var body = batch.ToByteArray();
                 var props = m_Channel.Value.CreateBasicProperties();
 
                 props.DeliveryMode = 2;
@@ -60,15 +60,15 @@ namespace batch_webservice
                             exchange: ExchangeName,
                             routingKey: QueueName,
                             basicProperties: props,
-                            body: body));
+                            body: batchByteArray));
                 }
                 catch (Exception circuitException)
                 {
-                    Console.WriteLine($"Circuit is open, will abort sending batch! Sent {message} / {BatchSize}. Exception: {circuitException.Message}");
-                    throw new RabbitMQException($"Circuit is open, will abort sending batch! Sent {message} / {BatchSize}: {circuitException.Message}");
+                    Console.WriteLine($"Circuit is open, will abort sending batch! Sent {index} / {BatchSize}. Exception: {circuitException.Message}");
+                    throw new RabbitMQException($"Circuit is open, will abort sending batch! Sent {index} / {BatchSize}: {circuitException.Message}");
                 }
 
-                Console.WriteLine($"Published batch {message} / {BatchSize} ...");
+                Console.WriteLine($"Published batch {index} / {BatchSize} for key {hashKey}... is last: {index == BatchSize}");
             }
         }
 
