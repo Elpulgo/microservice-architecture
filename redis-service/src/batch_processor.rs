@@ -129,8 +129,14 @@ impl BatchProcessor {
 
     fn dispose_non_pending_batch_handlers(&mut self) {
         self.batch_handler_map.retain(|_, value| {
-            value.status == BatchStatus::PendingConsume
-                || value.status == BatchStatus::PendingDatabase
+            let is_timeout_exceeded = value.is_timeout_exceeded();
+            if is_timeout_exceeded {
+                println!("Will disposed batch '{}' since timeout exceeded ...", value.key);
+            }
+
+            (value.status == BatchStatus::PendingConsume
+                || value.status == BatchStatus::PendingDatabase)
+                && !is_timeout_exceeded
         });
     }
 

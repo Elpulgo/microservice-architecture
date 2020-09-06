@@ -78,9 +78,13 @@ pub fn consume_batch(
             ConsumerMessage::Delivery(delivery) => {
                 let body = String::from_utf8_lossy(&delivery.body);
                 let batch = serde_json::from_str::<Batch>(&body).unwrap();
-
                 batch_processor.add_batch(batch, reply_exchange);
-                consumer.ack(delivery)?
+
+                let tag = delivery.delivery_tag();
+                match consumer.ack(delivery) {
+                    Ok(_) => {}
+                    Err(err) => println!("Failed to ack delivery '{}', err: {}", tag, err),
+                }
             }
             ConsumerMessage::ClientCancelled => {
                 println!("Client cancelled");
