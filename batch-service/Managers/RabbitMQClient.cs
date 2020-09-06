@@ -1,78 +1,54 @@
 using System;
 using RabbitMQ.Client;
-using Polly.CircuitBreaker;
 
 namespace batch_webservice
 {
     public interface IRabbitMQClient
     {
-        void PublishBatch();
+        IModel SetupMQTTBindings(MqttBinding binding);
     }
 
     public class RabbitMQClient : IDisposable, IRabbitMQClient
     {
-        private const int BatchSize = 100;
-        private const string ExchangeName = "exchange_batch";
-        private const string QueueName = "batch";
-        private readonly Lazy<IModel> m_Channel = new Lazy<IModel>(() => Connect());
-        private readonly IPolicyManager m_PolicyManager;
+        private readonly Lazy<IConnection> m_Connection = new Lazy<IConnection>(() => Connect());
 
-        public RabbitMQClient(IPolicyManager policyManager)
+        public RabbitMQClient()
         {
-            m_PolicyManager = policyManager;
         }
 
-        public void PublishBatch()
+        public IModel SetupMQTTBindings(MqttBinding mqttBinding)
         {
-            var hashKey = Guid.NewGuid();
+            var channel = m_Connection.Value.CreateModel();
 
-            if (m_Channel.Value.IsClosed)
-            {
-                Console.WriteLine("Channel is closed, won't send batch ...");
-                throw new RabbitMQException("MQTT channel is closed!");
-            }
+            var queue = channel.QueueDeclare(
+                queue: mqttBinding.QueueName,
+                durable: false,
+                exclusive: false,
+                autoDelete: false,
+                arguments: null
+            );
 
-            if (m_PolicyManager.PolicyRabbitMQPublish.CircuitState == CircuitState.Open ||
-                m_PolicyManager.PolicyRabbitMQPublish.CircuitState == CircuitState.Isolated)
-            {
-                Console.WriteLine("Circuit is open, won't send batch ...");
-                throw new RabbitMQException("Circuit is open or isolated, won't try and send batch!");
-            }
+            channel.ExchangeDeclare(
+                exchange: mqttBinding.ExchangeName,
+                type: "direct",
+                durable: false,
+                autoDelete: false,
+                null
+            );
 
-            for (var index = 1; index <= BatchSize; index++)
-            {
-                var batchByteArray = new Batch(
-                    hashKey: hashKey,
-                    key: $"{hashKey}_key_{index}",
-                    value: $"{hashKey}_value_{index}",
-                    batchSize: BatchSize,
-                    isLastInBatch: index == BatchSize)
-                    .ToByteArray();
+            channel.QueueBind(
+                queue: queue.QueueName,
+                exchange: mqttBinding.ExchangeName,
+                routingKey: mqttBinding.RoutingKey,
+                null
+            );
 
-                var props = m_Channel.Value.CreateBasicProperties();
+            Console.WriteLine($"Successfully setup bindings for queue '{mqttBinding.QueueName}', exchange '{mqttBinding.ExchangeName}'.");
 
-                props.DeliveryMode = 2;
-                props.ContentType = "application/json";
-
-                try
-                {
-                    m_PolicyManager.PolicyRabbitMQPublish.Execute(() => m_Channel.Value.BasicPublish(
-                            exchange: ExchangeName,
-                            routingKey: QueueName,
-                            basicProperties: props,
-                            body: batchByteArray));
-                }
-                catch (Exception circuitException)
-                {
-                    Console.WriteLine($"Circuit is open, will abort sending batch! Sent {index} / {BatchSize}. Exception: {circuitException.Message}");
-                    throw new RabbitMQException($"Circuit is open, will abort sending batch! Sent {index} / {BatchSize}: {circuitException.Message}");
-                }
-
-                Console.WriteLine($"Published batch {index} / {BatchSize} for key {hashKey}... is last: {index == BatchSize}");
-            }
+            return channel;
         }
 
-        private static IModel Connect()
+        private static IConnection Connect()
         {
             int maxConnectionRetries = 20;
             int connectionRetries = 0;
@@ -83,9 +59,7 @@ namespace batch_webservice
                 {
                     var connection = new ConnectionFactory() { HostName = "mqtt", Port = 5672 }.CreateConnection();
                     Console.WriteLine("Successfully connected to MQTT broker!");
-                    var channel = connection.CreateModel();
-                    SetupRoutes(channel);
-                    return channel;
+                    return connection;
                 }
                 catch (RabbitMQ.Client.Exceptions.BrokerUnreachableException)
                 {
@@ -102,41 +76,13 @@ namespace batch_webservice
             return null;
         }
 
-        private static void SetupRoutes(IModel channel)
-        {
-            var queue = channel.QueueDeclare(
-                queue: QueueName,
-                durable: false,
-                exclusive: false,
-                autoDelete: false,
-                arguments: null
-            );
-
-            channel.ExchangeDeclare(
-                exchange: ExchangeName,
-                type: "direct",
-                durable: false,
-                autoDelete: false,
-                null
-            );
-
-            channel.QueueBind(
-                queue: queue.QueueName,
-                exchange: ExchangeName,
-                queue.QueueName,
-                null
-            );
-
-            Console.WriteLine("Successfully setup and bind queues/exchanges!");
-        }
-
 
         public void Dispose()
         {
-            if (!m_Channel.IsValueCreated)
+            if (!m_Connection.IsValueCreated)
                 return;
 
-            m_Channel.Value.Close();
+            m_Connection.Value.Close();
         }
     }
 

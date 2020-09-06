@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Caching.Redis;
+using Microsoft.Extensions.Hosting;
 
 namespace batch_webservice
 {
@@ -24,6 +25,11 @@ namespace batch_webservice
 
             services.RegisterServiceDiscovery(Configuration.GetServiceConfig());
             services.AddControllers();
+
+            services.AddSingleton<IHostedService, MessageConsumer>();
+            services.AddSingleton<IMessageConsumer, MessageConsumer>();
+
+            services.AddSingleton<IMessagePublisher, MessagePublisher>();
             services.AddSingleton<IRabbitMQClient, RabbitMQClient>();
             services.AddSingleton<IRedisManager, RedisManager>();
             services.AddSingleton<IPolicyManager, PolicyManager>();
