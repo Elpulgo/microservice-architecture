@@ -3,6 +3,7 @@ use crate::redis_manager;
 use crate::mqtt_publisher;
 use std::collections::hash_map::{Entry, HashMap};
 use serde::{Deserialize, Serialize};
+use serde_repr::{Serialize_repr, Deserialize_repr};
 
 const BATCH_REPLY_ROUTING_KEY: &str = "batch_reply";
 
@@ -18,7 +19,8 @@ pub struct BatchHandler {
     pub batches: Vec<Batch>,
 }
 
-#[derive(Debug, PartialEq, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Copy, Clone, Serialize_repr, Deserialize_repr)]
+#[repr(i32)]
 pub enum BatchStatus {
     PendingConsume = 0,
     PendingDatabase = 1,
@@ -42,22 +44,7 @@ impl BatchProcessor {
         }
     }
 
-    // FOR DEBUGGING PURPOSES!!
-    pub fn print(&mut self) {
-        if self.batch_handler_map.len() == 0 {
-            println!("Nothing to print, map is empty!");
-            return;
-        }
-
-        for (key, value) in self.batch_handler_map.iter_mut() {
-            println!("{} / {:?}", key, value);
-        }
-    }
-    // END DEBUG!!!
-
     pub fn add_batch(&mut self, batch: Batch, reply_exchange: &amiquip::Exchange) {
-        self.dispose_non_pending_batch_handlers();
-
         let key = &batch.hash_key().to_string();
 
         match self.batch_handler_map.entry(String::from(key)) {
@@ -120,6 +107,8 @@ impl BatchProcessor {
                 }
             }
         };
+
+        self.dispose_non_pending_batch_handlers();
     }
 
     fn dispose_batch_handler(&mut self, key: &String) {
