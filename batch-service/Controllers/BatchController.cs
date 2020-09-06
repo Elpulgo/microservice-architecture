@@ -9,22 +9,22 @@ namespace batch_webservice.Controllers
     [Route("api/[controller]")]
     public class BatchController : ControllerBase
     {
-        private readonly IRabbitMQClient m_RabbitMQClient;
+        private readonly IMessagePublisher m_MessagePublisher;
         private readonly IRedisManager m_RedisManager;
 
 
         public BatchController(
-            IRabbitMQClient rabbitMQClient,
+            IMessagePublisher messagePublisher,
             IRedisManager redisManager)
         {
-            m_RabbitMQClient = rabbitMQClient;
+            m_MessagePublisher = messagePublisher;
             m_RedisManager = redisManager;
         }
 
         [HttpPost]
         public IActionResult Post()
         {
-            m_RabbitMQClient.PublishBatch();
+            m_MessagePublisher.PublishBatch();
             return Ok();
         }
 
