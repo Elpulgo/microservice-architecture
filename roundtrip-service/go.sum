@@ -14,6 +14,8 @@ github.com/elpulgo/microservice-architecture v0.1.0/go.mod h1:wBAPCcQdIPXCTA83V8
 github.com/elpulgo/microservice-architecture/shared/go-shared v0.0.0-20200902075731-3e78b39a8c89 h1:WG/UjsJtFOwDGK/WOURXK8h5JRtuEKTKL4cnQlw3Pac=
 github.com/elpulgo/microservice-architecture/shared/go-shared v0.0.0-20200902081457-3d0252d3fff1 h1:2UAskwUUPMJCWDgy8H1lkbZHy3px1pEWuRrTn5ZsXqM=
 github.com/elpulgo/microservice-architecture/shared/go-shared v0.0.0-20200902081457-3d0252d3fff1/go.mod h1:7U9rAcKMnjm8GDAYNvE1CG6/7lSRfE0MCG5X7uym1Ac=
+github.com/elpulgo/microservice-architecture/shared/go-shared v0.0.0-20200907182036-0c1d7445f07f h1:8EFBX3By3+sLiitbIaIrIsLdqCKFPlfKD9hPm+3udpA=
+github.com/elpulgo/microservice-architecture/shared/go-shared v0.0.0-20200907182036-0c1d7445f07f/go.mod h1:u6NuWgdJY5aWo/GF4O9JNoIjD703hIvgISV7pJjw27Q=
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/fatih/color v1.9.0 h1:8xPHl4/q1VyqGIPif1F+1V3Y3lSmrq01EabUW3CoW5s=
 github.com/fatih/color v1.9.0/go.mod h1:eQcE1qtQxscV5RaZvpXrrb8Drkc3/DdQ+uUYCNjL+zU=

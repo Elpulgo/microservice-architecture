@@ -10,7 +10,8 @@ import (
 	"syscall"
 	"webservice/mqtt"
 
-	serviceregistration "github.com/elpulgo/microservice-architecture/shared/go-shared"
+	models "github.com/elpulgo/microservice-architecture/shared/go-shared/models"
+	serviceregistration "github.com/elpulgo/microservice-architecture/shared/go-shared/serviceregistration"
 	"github.com/streadway/amqp"
 )
 
@@ -28,7 +29,7 @@ func main() {
 	// via websocket to client. This endpoint will wait for confirmation of message from server and respond with a status
 	// if message was confirmed or not by consumer
 	http.HandleFunc("/api/roundtrip", func(w http.ResponseWriter, r *http.Request) {
-		var roundtrip RoundTrip
+		var roundtrip models.RoundTrip
 		if err := json.NewDecoder(r.Body).Decode(&roundtrip); err != nil {
 			log.Println("Failed to decode value from HTTP Request!")
 		}
@@ -99,7 +100,7 @@ func initMQTTConnection() *mqtt.Connection {
 	return connection
 }
 
-func publish(connection *mqtt.Connection, message RoundTrip) bool {
+func publish(connection *mqtt.Connection, message models.RoundTrip) bool {
 	mqttMessage := amqp.Publishing{
 		ContentType:  "application/json",
 		DeliveryMode: amqp.Transient,
