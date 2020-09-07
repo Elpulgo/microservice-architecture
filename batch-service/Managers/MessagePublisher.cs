@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Threading;
 using Polly.CircuitBreaker;
 using RabbitMQ.Client;
+using NetCoreShared;
 
 namespace batch_webservice
 {
@@ -20,7 +21,6 @@ namespace batch_webservice
         private readonly IMessageConsumer m_MessageConsumer;
         private readonly IModel m_Channel;
         private MqttBinding MqttBinding => Constants.MqttBindings[MqttType.BatchPublish];
-
         private ConcurrentDictionary<Guid, BatchStatus> m_BatchReplyMap;
 
         public MessagePublisher(
@@ -76,7 +76,7 @@ namespace batch_webservice
 
             while (retries < BatchReplyTimeoutLimitSeonds)
             {
-                if (!m_BatchReplyMap.TryGetValue(batchKey, out BatchStatus status))
+                if (!m_BatchReplyMap.TryGetValue(batchKey, out BatchStatus status) || status == BatchStatus.None)
                 {
                     Thread.Sleep(1000);
                     retries++;
@@ -109,13 +109,13 @@ namespace batch_webservice
 
             if (!m_BatchReplyMap.ContainsKey(key))
             {
-                Console.WriteLine($"Got reply for key '{key}', but too late, call is already disposed.");
+                Console.WriteLine($"Got reply for key '{key}' with status '{reply.Status}', but too late, caller is already disposed.");
                 return;
             }
 
-            if (!m_BatchReplyMap.TryAdd(key, reply.Status))
+            if (!m_BatchReplyMap.TryUpdate(key, reply.Status, BatchStatus.None))
             {
-                Console.WriteLine($"Failed to add key '{key}' to intermittent map!");
+                Console.WriteLine($"Failed to add key '{key}' to intermittent map, since status for key is not 'None'!");
             }
         }
 
