@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using RabbitMQ.Client;
 
 namespace batch_webservice
@@ -68,6 +69,7 @@ namespace batch_webservice
                 finally
                 {
                     connectionRetries++;
+                    Thread.Sleep(1000);
                 }
             }
 
