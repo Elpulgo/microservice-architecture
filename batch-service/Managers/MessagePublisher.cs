@@ -15,7 +15,6 @@ namespace batch_webservice
 
     public class MessagePublisher : IMessagePublisher, IDisposable
     {
-        // private const int BatchSize = 10;
         private const int BatchReplyTimeoutLimitSeonds = 20;
         private readonly IPolicyManager m_PolicyManager;
         private readonly IRabbitMQClient m_RabbitMQClient;
@@ -46,7 +45,6 @@ namespace batch_webservice
 
         public BatchStatus PublishBatch()
         {
-            Console.WriteLine($"Batchsize is: {BatchSize}");
             EnsureChannelIsOpen();
             EnsureCircuitIsClosed();
 

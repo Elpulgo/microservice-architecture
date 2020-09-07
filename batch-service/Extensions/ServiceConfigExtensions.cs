@@ -15,10 +15,10 @@ namespace batch_webservice
 
             var serviceConfig = new ServiceConfig
             {
-                ServiceDiscoveryAddress = configuration.GetValue<Uri>("ServiceConfig:serviceDiscoveryAddress"),
-                ServiceAddress = configuration.GetValue<Uri>("ServiceConfig:serviceAddress"),
-                ServiceName = configuration.GetValue<string>("ServiceConfig:serviceName"),
-                ServiceId = configuration.GetValue<string>("ServiceConfig:serviceId")
+                ServiceDiscoveryAddress = configuration.GetValue<Uri>("CONSUL:DISCOVERYADDRESS"),
+                ServiceAddress = configuration.GetValue<Uri>("CONSUL:SERVICEADDRESS"),
+                ServiceName = configuration.GetValue<string>("CONSUL:SERVICENAME"),
+                ServiceId = configuration.GetValue<string>("CONSUL:SERVICEID")
             };
 
             return serviceConfig;

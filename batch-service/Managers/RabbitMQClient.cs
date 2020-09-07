@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using Microsoft.Extensions.Configuration;
 using RabbitMQ.Client;
 
 namespace batch_webservice
@@ -11,10 +12,18 @@ namespace batch_webservice
 
     public class RabbitMQClient : IDisposable, IRabbitMQClient
     {
-        private readonly Lazy<IConnection> m_Connection = new Lazy<IConnection>(() => Connect());
+        private const int MaxConnectionRetries = 20;
+        private readonly Lazy<IConnection> m_Connection;
 
-        public RabbitMQClient()
+        private IConfiguration Configuration { get; }
+
+        private int MqttPort => int.Parse(Configuration["AMQP_URL"].Split(':')[1]);
+        private string MqttHost => Configuration["AMQP_URL"].Split(':')[0];
+
+        public RabbitMQClient(IConfiguration configuration)
         {
+            Configuration = configuration;
+            m_Connection = new Lazy<IConnection>(() => Connect());
         }
 
         public IModel SetupMQTTBindings(MqttBinding mqttBinding)
@@ -49,22 +58,21 @@ namespace batch_webservice
             return channel;
         }
 
-        private static IConnection Connect()
+        private IConnection Connect()
         {
-            int maxConnectionRetries = 20;
             int connectionRetries = 0;
 
-            while (connectionRetries <= maxConnectionRetries)
+            while (connectionRetries <= MaxConnectionRetries)
             {
                 try
                 {
-                    var connection = new ConnectionFactory() { HostName = "mqtt", Port = 5672 }.CreateConnection();
+                    var connection = new ConnectionFactory() { HostName = MqttHost, Port = MqttPort }.CreateConnection();
                     Console.WriteLine("Successfully connected to MQTT broker!");
                     return connection;
                 }
                 catch (RabbitMQ.Client.Exceptions.BrokerUnreachableException)
                 {
-                    Console.WriteLine($"Failed to connect to MQTT broker {connectionRetries} / {maxConnectionRetries}.. Will retry!");
+                    Console.WriteLine($"Failed to connect to MQTT broker {connectionRetries} / {MaxConnectionRetries}.. Will retry!");
                 }
                 finally
                 {
@@ -73,7 +81,7 @@ namespace batch_webservice
                 }
             }
 
-            Console.WriteLine($"Failed to connect to MQTT broker after {maxConnectionRetries}! Will exit!");
+            Console.WriteLine($"Failed to connect to MQTT broker after {MaxConnectionRetries}! Will exit!");
             Environment.Exit(-1);
             return null;
         }
