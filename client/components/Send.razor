@@ -1,5 +1,6 @@
 @using System
 @using System.Text.Json
+@using NetCoreShared
 @inject HttpService HttpService
 
 
@@ -34,7 +35,7 @@
 
 @if(BatchSuccess){
     <br>
-    <span style="padding-top: 10px; color: lightseagreen; font-weight: bold;">Batch was successfully sent!</span>
+    <span style="padding-top: 10px; color: lightseagreen; font-weight: bold;">Batch was sent and got reply with status: @BatchStatus</span>
 }
 
 @if(!string.IsNullOrEmpty(BatchException)){
@@ -78,6 +79,8 @@
     private bool KeyValuePairSuccess { get; set; }
     private bool IsBatchSubmitDisabled { get; set; }
 
+    private BatchStatus BatchStatus { get; set; }
+
     private List<string> BatchKeys { get; set; } = new List<string>();
     private List<KeyValueModel> BatchKeyValues { get; set; } = new List<KeyValueModel>();
 
@@ -116,12 +119,13 @@
 
         try
         {
-            await HttpService.PostBatchAsync();
+            var batchStatus = await HttpService.PostBatchAsync();
+            BatchStatus = batchStatus;
             await GetBatchKeys();
             BatchSuccess = true;
         }
         catch (Exception exception)
-        {              
+        {
             SetBatchException(exception);
         }
         finally
@@ -170,7 +174,7 @@
             StateHasChanged();
         }
     }
-  
+
     private void SetBatchException(Exception exception)
     {
         try
