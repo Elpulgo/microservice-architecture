@@ -21,7 +21,6 @@ services:
       dockerfile: Dockerfile
     environment:
       - AMQP_URL=amqp://guest:guest@mqtt:5672
-      - BATCH_SIZE=500
       - ServiceDiscoveryAddress=http://consul:8500
       - ServiceAddress=http://roundtrip-service:8080
       - ServiceName=roundtrip-service
@@ -36,8 +35,8 @@ services:
     networks:
       - microservice
     build:
-      context: ./batch-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./batch-service/Dockerfile
     environment:
         - ASPNETCORE_URLS=http://+:8040
         - AMQP_URL=amqp://guest:guest@mqtt:5672
@@ -76,8 +75,8 @@ services:
     networks:
       - microservice
     build:
-      context: ./client
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./client/Dockerfile
     depends_on: 
       - roundtrip-service
       - batch-service
@@ -104,8 +103,9 @@ services:
     restart: always
     networks:
       - microservice
-    #ports: 
-    #  - "15672:15672"
+    ports: 
+     - "15672"
+     - "5672"
 
   redis:
     image: "redis:6-alpine"
@@ -116,9 +116,12 @@ services:
       - ~/redis-data:/data
     networks: 
       - microservice
+    ports:
+      - "6379"
 
   consul:
     image: consul:latest
+    restart: always
     container_name: consul
     command: consul agent -dev -log-level=warn -ui -client=0.0.0.0
     hostname: consul
