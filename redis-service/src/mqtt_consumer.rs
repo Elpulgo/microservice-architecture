@@ -35,8 +35,7 @@ pub fn consume_roundtrip(
                 match handle_roundtrip(&body, &delivery) {
                     Ok(roundtrip) => {
                         consumer.ack(delivery)?;
-                        let bytes = serde_json::to_vec(&roundtrip).unwrap();
-                        match publish(&publish_forward_exchange, "forward_roundtrip", bytes) {
+                        match publish(&publish_forward_exchange, "forward_roundtrip", roundtrip) {
                             Ok(_) => continue,
                             Err(err) => println!("{}", err),
                         }
