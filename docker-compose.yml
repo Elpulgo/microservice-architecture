@@ -39,12 +39,13 @@ services:
       dockerfile: ./batch-service/Dockerfile
     environment:
         - ASPNETCORE_URLS=http://+:8040
-        - AMQP_URL=amqp://guest:guest@mqtt:5672
+        - AMQP_URL=mqtt:5672
         - REDIS_URL=redis:6379
-        - ServiceConfig__serviceDiscoveryAddress=http://consul:8500
-        - ServiceConfig__serviceAddress=http://batch-service:8040
-        - ServiceConfig__serviceName=batch-service
-        - ServiceConfig__serviceId=batch-service-v1
+        - BATCH_SIZE=20
+        - CONSUL__DISCOVERYADDRESS=http://consul:8500
+        - CONSUL__SERVICEADDRESS=http://batch-service:8040
+        - CONSUL__SERVICENAME=batch-service
+        - CONSUL__SERVICEID=batch-service-v1
     depends_on:
         - mqtt
         - redis

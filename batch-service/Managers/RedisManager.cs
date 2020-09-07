@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 using StackExchange.Redis;
 
 namespace batch_webservice
@@ -15,11 +16,17 @@ namespace batch_webservice
     public class RedisManager : IRedisManager
     {
         private const string Pattern = "*";
-        private readonly Lazy<ConnectionMultiplexer> m_RedisConnection = new Lazy<ConnectionMultiplexer>(() => OpenConnection());
+        private readonly Lazy<ConnectionMultiplexer> m_RedisConnection;
         private readonly IPolicyManager m_PolicyManager;
 
-        public RedisManager(IPolicyManager policyManager)
+        private IConfiguration Configuration { get; }
+        private string RedisUrl => Configuration["REDIS_URL"];
+        public RedisManager(
+            IConfiguration configuration,
+            IPolicyManager policyManager)
         {
+            Configuration = configuration;
+            m_RedisConnection = new Lazy<ConnectionMultiplexer>(() => OpenConnection());
             m_PolicyManager = policyManager;
         }
 
@@ -68,23 +75,11 @@ namespace batch_webservice
         private IDatabase GetRedisInstance()
             => m_PolicyManager.PolicyRedisConnection.Execute(() => m_RedisConnection.Value.GetDatabase());
 
-        private static ConnectionMultiplexer OpenConnection()
-            => ConnectionMultiplexer.Connect(GetRedisUrl());
+        private ConnectionMultiplexer OpenConnection()
+            => ConnectionMultiplexer.Connect(RedisUrl);
 
         private IServer GetServer()
-            => m_PolicyManager.PolicyRedisServer.Execute(() => m_RedisConnection.Value.GetServer(GetRedisUrl()));
-
-        private static string GetRedisUrl()
-        {
-            var redisUrl = Environment.GetEnvironmentVariable("REDIS_URL");
-            if (string.IsNullOrEmpty(redisUrl))
-            {
-                Console.WriteLine("Failed to access environment variable for Redis 'REDIS_URL'! Check your environment!");
-                Environment.Exit(-1);
-            }
-
-            return redisUrl;
-        }
+            => m_PolicyManager.PolicyRedisServer.Execute(() => m_RedisConnection.Value.GetServer(RedisUrl));
     }
 
     public class RedisException : Exception
