@@ -43,7 +43,7 @@ func UnregisterServiceWithConsul(agent *consulapi.Agent) {
 }
 
 func getConsulAddress() string {
-	consulServiceAddress, exists := os.LookupEnv("CONSUL:DISCOVERYADDRESS")
+	consulServiceAddress, exists := os.LookupEnv("DISCOVERYADDRESS")
 	if !exists {
 		log.Fatalln("Consul service discovery address is missing in environment variables, can't register service to Consul!")
 	}
@@ -51,7 +51,7 @@ func getConsulAddress() string {
 }
 
 func getServiceID() string {
-	serviceID, exists := os.LookupEnv("CONSUL:SERVICEID")
+	serviceID, exists := os.LookupEnv("SERVICEID")
 	if !exists {
 		log.Fatalln("ServiceId is missing in environment variables, can't register service to Consul!")
 	}
@@ -62,12 +62,12 @@ func buildRegistration() *consulapi.AgentServiceRegistration {
 
 	serviceID := getServiceID()
 
-	serviceName, exists := os.LookupEnv("CONSUL:SERVICENAME")
+	serviceName, exists := os.LookupEnv("SERVICENAME")
 	if !exists {
 		log.Fatalln("ServiceName is missing in environment variables, can't register service to Consul!")
 	}
 
-	serviceAddress, exists := os.LookupEnv("CONSUL:SERVICEADDRESS")
+	serviceAddress, exists := os.LookupEnv("SERVICEADDRESS")
 	if !exists {
 		log.Fatalln("ServiceAddress is missing in environment variables, can't register service to Consul!")
 	}
