@@ -5,7 +5,6 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"log"
 	"net/http"
@@ -56,22 +55,6 @@ func main() {
 		log.Fatal("ListenAndServe: ", err)
 		os.Exit(1)
 	}
-}
-
-type postModel struct {
-	Key   string
-	Value string
-}
-
-func (model *postModel) convertToByteArray() []byte {
-
-	var byteArray, err = json.Marshal(model)
-	if err != nil {
-		log.Fatal("Failed to convert model to byte array!")
-		os.Exit(1)
-	}
-
-	return byteArray
 }
 
 func initMQTTConnection() *mqtt.Consumer {
