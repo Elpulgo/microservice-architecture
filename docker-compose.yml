@@ -1,4 +1,13 @@
 version: '3.5'
+
+x-AMQP_URL: 
+  &AMQP_URL
+  AMQP_URL=amqp://guest:guest@mqtt:5672
+
+x-CONSUL_SERVICE_DISCOVERY:
+  &ServiceDiscoveryAddress
+  ServiceDiscoveryAddress=http://consul:8500
+
 services:
   api-gateway:
     restart: always
@@ -20,8 +29,8 @@ services:
       context: ./roundtrip-service
       dockerfile: Dockerfile
     environment:
-      - AMQP_URL=amqp://guest:guest@mqtt:5672
-      - ServiceDiscoveryAddress=http://consul:8500
+      - *AMQP_URL
+      - *ServiceDiscoveryAddress
       - ServiceAddress=http://roundtrip-service:8080
       - ServiceName=roundtrip-service
       - ServiceId=roundtrip-service-v1
@@ -57,8 +66,8 @@ services:
     networks:
       - microservice
     environment: 
-      - AMQP_URL=amqp://guest:guest@mqtt:5672
-      - ServiceDiscoveryAddress=http://consul:8500
+      - *AMQP_URL
+      - *ServiceDiscoveryAddress
       - ServiceAddress=http://websocket-service:8010
       - ServiceName=websocket-service
       - ServiceId=websocket-service-v1
@@ -92,7 +101,7 @@ services:
       context: ./redis-service
       dockerfile: Dockerfile
     environment: 
-      - AMQP_URL=amqp://guest:guest@mqtt:5672
+      - *AMQP_URL
       - REDIS_URL=redis://redis:6379
     depends_on: 
       - mqtt 
