@@ -3,7 +3,7 @@ module webservice
 go 1.14
 
 require (
-	github.com/elpulgo/microservice-architecture/shared/go-shared v0.0.0-20200902081457-3d0252d3fff1
+	github.com/elpulgo/microservice-architecture/shared/go-shared v0.0.0-20200907182036-0c1d7445f07f
 	github.com/golobby/container v1.2.3
 	github.com/google/uuid v1.1.1
 	github.com/hashicorp/consul/api v1.6.0
