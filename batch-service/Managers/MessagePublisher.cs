@@ -4,6 +4,7 @@ using System.Threading;
 using Polly.CircuitBreaker;
 using RabbitMQ.Client;
 using NetCoreShared;
+using Microsoft.Extensions.Configuration;
 
 namespace batch_webservice
 {
@@ -14,20 +15,27 @@ namespace batch_webservice
 
     public class MessagePublisher : IMessagePublisher, IDisposable
     {
-        private const int BatchSize = 10;
+        // private const int BatchSize = 10;
         private const int BatchReplyTimeoutLimitSeonds = 20;
         private readonly IPolicyManager m_PolicyManager;
         private readonly IRabbitMQClient m_RabbitMQClient;
         private readonly IMessageConsumer m_MessageConsumer;
         private readonly IModel m_Channel;
         private MqttBinding MqttBinding => Constants.MqttBindings[MqttType.BatchPublish];
+
+        private IConfiguration Configuration { get; }
+
+        private int BatchSize => int.Parse(Configuration["BATCH_SIZE"]);
+
         private ConcurrentDictionary<Guid, BatchStatus> m_BatchReplyMap;
 
         public MessagePublisher(
+            IConfiguration configuration,
             IPolicyManager policyManager,
             IRabbitMQClient rabbitMQClient,
             IMessageConsumer messageConsumer)
         {
+            Configuration = configuration;
             m_BatchReplyMap = new ConcurrentDictionary<Guid, BatchStatus>();
             m_PolicyManager = policyManager;
             m_RabbitMQClient = rabbitMQClient;
@@ -38,6 +46,7 @@ namespace batch_webservice
 
         public BatchStatus PublishBatch()
         {
+            Console.WriteLine($"Batchsize is: {BatchSize}");
             EnsureChannelIsOpen();
             EnsureCircuitIsClosed();
 
