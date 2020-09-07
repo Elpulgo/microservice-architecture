@@ -24,8 +24,8 @@ namespace batch_webservice.Controllers
         [HttpPost]
         public IActionResult Post()
         {
-            m_MessagePublisher.PublishBatch();
-            return Ok();
+            var replyStatus = m_MessagePublisher.PublishBatch();
+            return Ok(replyStatus);
         }
 
         [HttpGet]

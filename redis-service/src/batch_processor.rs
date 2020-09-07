@@ -22,12 +22,13 @@ pub struct BatchHandler {
 #[derive(Debug, PartialEq, Copy, Clone, Serialize_repr, Deserialize_repr)]
 #[repr(i32)]
 pub enum BatchStatus {
-    PendingConsume = 0,
-    PendingDatabase = 1,
-    DatabaseOperationFailed = 2,
-    Invalid = 3,
-    TimeoutExceeded = 4,
-    Done = 5,
+    None = 0,
+    PendingConsume = 1,
+    PendingDatabase = 2,
+    DatabaseOperationFailed = 3,
+    Invalid = 4,
+    TimeoutExceeded = 5,
+    Done = 6,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

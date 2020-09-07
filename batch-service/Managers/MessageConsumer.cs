@@ -10,6 +10,7 @@ namespace batch_webservice
 {
     public interface IMessageConsumer
     {
+        event EventHandler<BatchReply> BatchReplyEventChanged;
     }
 
     public class MessageConsumer : IMessageConsumer, IDisposable, IHostedService
@@ -17,6 +18,8 @@ namespace batch_webservice
         private readonly IRabbitMQClient m_RabbitMQClient;
         private readonly IModel m_Channel;
         private MqttBinding MqttBinding => Constants.MqttBindings[MqttType.BatchConsumeReply];
+
+        public event EventHandler<BatchReply> BatchReplyEventChanged;
 
         public MessageConsumer(IRabbitMQClient rabbitMQClient)
         {
@@ -33,7 +36,7 @@ namespace batch_webservice
                 if (batchReply == null)
                     return;
 
-                Console.WriteLine($"Successfully consumed batchkey '{batchReply.Key}' with status  '{batchReply.Status}'");
+                BatchReplyEventChanged?.Invoke(this, batchReply);
             };
 
             m_Channel.BasicConsume(

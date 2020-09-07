@@ -26,8 +26,10 @@ namespace batch_webservice
             services.RegisterServiceDiscovery(Configuration.GetServiceConfig());
             services.AddControllers();
 
-            services.AddSingleton<IHostedService, MessageConsumer>();
-            services.AddSingleton<IMessageConsumer, MessageConsumer>();
+            services.AddSingleton<MessageConsumer>();
+
+            services.AddSingleton<IHostedService>(provider => provider.GetRequiredService<MessageConsumer>());
+            services.AddSingleton<IMessageConsumer>(provider => provider.GetRequiredService<MessageConsumer>());
 
             services.AddSingleton<IMessagePublisher, MessagePublisher>();
             services.AddSingleton<IRabbitMQClient, RabbitMQClient>();
