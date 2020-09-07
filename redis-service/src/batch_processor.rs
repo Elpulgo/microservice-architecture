@@ -78,8 +78,8 @@ impl BatchProcessor {
                                                 "Successfully added batch with key '{}' to Redis!",
                                                 key
                                             );
-                                            self.dispose_batch_handler(key);
                                             self.publish_batch_reply(reply_exchange, BatchStatus::Done, key);
+                                            self.dispose_batch_handler(key);
                                         }
                                         Err(err) => {
                                             println!(
@@ -142,7 +142,7 @@ impl BatchProcessor {
                 status: status, 
                 key: String::from(key) 
         }){
-            Ok(_) => {},
+            Ok(_) => println!("Succesfully published BatchReply for batch key '{}'", key),
             Err(err) => println!("{}", err)
         }
     }
