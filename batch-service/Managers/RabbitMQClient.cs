@@ -17,8 +17,7 @@ namespace batch_webservice
 
         private IConfiguration Configuration { get; }
 
-        private int MqttPort => int.Parse(Configuration["AMQP_URL"].Split(':')[1]);
-        private string MqttHost => Configuration["AMQP_URL"].Split(':')[0];
+        private string MqttConnectionString => Configuration["AMQP_URL"];
 
         public RabbitMQClient(IConfiguration configuration)
         {
@@ -66,7 +65,11 @@ namespace batch_webservice
             {
                 try
                 {
-                    var connection = new ConnectionFactory() { HostName = MqttHost, Port = MqttPort }.CreateConnection();
+                    var connection = new ConnectionFactory()
+                    {
+                        Endpoint = new AmqpTcpEndpoint(new Uri(MqttConnectionString))
+                    }.CreateConnection();
+
                     Console.WriteLine("Successfully connected to MQTT broker!");
                     return connection;
                 }
