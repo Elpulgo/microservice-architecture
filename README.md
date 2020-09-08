@@ -4,6 +4,7 @@ An example of microservice architecture in docker containers
 ## Scenarios
 
 2 simple scenarios
+
     - A key/value is sent as a roundtrip from the client, is transported through a range of services and returned to the client.
     - A batch is sent, and persisted to a store and reply the status of the transaction. The batch is then read from the store.
 
