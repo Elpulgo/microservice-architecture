@@ -1,0 +1,141 @@
+version: '3.5'
+
+x-SHARED-VARIABLES: 
+  &AMQP_URL
+  AMQP_URL=amqp://guest:guest@mqtt:5672  
+
+x-CONSUL_SERVICE_DISCOVERY:
+  &ServiceDiscoveryAddress
+  ServiceDiscoveryAddress=http://consul:8500
+
+x-BACTH-SIZE:
+  &BatchSize
+  BatchSize=20
+
+x-REDIS-URL:
+  &RedisUrl
+  REDIS_URL=redis:6379
+
+services:
+  api-gateway:
+    restart: always
+    image: elpulgo/microservices_api-gateway:latest
+    container_name: api-gateway
+    networks:
+      - microservice
+    ports:
+      - "5001:80"
+
+  roundtrip-service:
+    restart: always
+    image: elpulgo/microservices_roundtrip-service:latest
+    container_name: roundtrip-service
+    networks:
+      - microservice
+    environment:
+      - *AMQP_URL
+      - *ServiceDiscoveryAddress
+      - ServiceAddress=http://roundtrip-service:8080
+      - ServiceName=roundtrip-service
+      - ServiceId=roundtrip-service-v1
+    depends_on: 
+      - mqtt
+      - consul
+  
+  batch-service:
+    restart: always
+    image: elpulgo/microservices_batch-service:latest
+    container_name: batch-service
+    networks:
+      - microservice
+    environment:
+        - ASPNETCORE_URLS=http://+:8040
+        - *RedisUrl
+        - *AMQP_URL
+        - *BatchSize
+        - *ServiceDiscoveryAddress
+        - ServiceAddress=http://batch-service:8040
+        - ServiceName=batch-service
+        - ServiceId=batch-service-v1
+    depends_on:
+        - mqtt
+        - redis
+        - consul
+  
+  websocket-service:
+    restart: always
+    image: elpulgo/microservices_websocket-service:latest
+    container_name: websocket-service
+    networks:
+      - microservice
+    environment: 
+      - *AMQP_URL
+      - *ServiceDiscoveryAddress
+      - ServiceAddress=http://websocket-service:8010
+      - ServiceName=websocket-service
+      - ServiceId=websocket-service-v1
+    depends_on: 
+      - mqtt
+  
+  client:
+    restart: always
+    image: elpulgo/microservices_client:latest
+    container_name: client
+    networks:
+      - microservice
+    depends_on: 
+      - roundtrip-service
+      - batch-service
+      - websocket-service
+    ports:      
+      - "5000:80"
+  
+  redis-service:
+    restart: always
+    image: elpulgo/microservices_redis-service:latest
+    container_name: redis-service
+    networks: 
+      - microservice
+    environment: 
+      - *AMQP_URL
+      - *BatchSize
+      - *RedisUrl
+    depends_on: 
+      - mqtt 
+      - redis
+
+  mqtt:
+    image: "rabbitmq:management-alpine"  
+    restart: always
+    container_name: mqtt
+    networks:
+      - microservice
+    ports: 
+     - "15672"
+     - "5672"
+
+  redis:
+    image: "redis:6-alpine"
+    restart: always
+    container_name: redis
+    networks: 
+      - microservice
+    command: redis-server --appendonly yes
+    volumes:
+      - ~/redis-data:/data
+    ports:
+      - "6379"
+
+  consul:
+    image: consul:latest
+    restart: always
+    container_name: consul
+    networks: 
+      - microservice
+    command: consul agent -dev -log-level=warn -ui -client=0.0.0.0
+    hostname: consul
+    ports:
+      - "8500"
+  
+networks:
+  microservice:
