@@ -1,6 +1,7 @@
 use crate::mqtt_message::Batch;
 use crate::redis_manager;
 use crate::mqtt_publisher;
+use crate::variables;
 use std::collections::hash_map::{Entry, HashMap};
 use serde::{Deserialize, Serialize};
 use serde_repr::{Serialize_repr, Deserialize_repr};
@@ -62,9 +63,8 @@ impl BatchProcessor {
                 } else {
                     match batch.is_last_in_batch() {
                         true => {
-                            let batch_size = batch.batch_size;
                             entry.get_mut().add_batch_value(batch);
-
+                            let batch_size = variables::get_batch_size();
                             match batch_size == entry.get().batches.len() {
                                 true => {
                                     entry.get_mut().change_status(BatchStatus::PendingDatabase);
