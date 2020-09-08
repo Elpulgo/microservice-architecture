@@ -1,12 +1,20 @@
 version: '3.5'
 
-x-AMQP_URL: 
+x-SHARED-VARIABLES: 
   &AMQP_URL
-  AMQP_URL=amqp://guest:guest@mqtt:5672
+  AMQP_URL=amqp://guest:guest@mqtt:5672  
 
 x-CONSUL_SERVICE_DISCOVERY:
   &ServiceDiscoveryAddress
   ServiceDiscoveryAddress=http://consul:8500
+
+x-BACTH-SIZE:
+  &BatchSize
+  BatchSize=20
+
+x-REDIS-URL:
+  &RedisUrl
+  REDIS_URL=redis:6379
 
 services:
   api-gateway:
@@ -48,13 +56,13 @@ services:
       dockerfile: ./batch-service/Dockerfile
     environment:
         - ASPNETCORE_URLS=http://+:8040
-        - AMQP_URL=mqtt:5672
-        - REDIS_URL=redis:6379
-        - BATCH_SIZE=20
-        - CONSUL__DISCOVERYADDRESS=http://consul:8500
-        - CONSUL__SERVICEADDRESS=http://batch-service:8040
-        - CONSUL__SERVICENAME=batch-service
-        - CONSUL__SERVICEID=batch-service-v1
+        - *RedisUrl
+        - *AMQP_URL
+        - *BatchSize
+        - *ServiceDiscoveryAddress
+        - ServiceAddress=http://batch-service:8040
+        - ServiceName=batch-service
+        - ServiceId=batch-service-v1
     depends_on:
         - mqtt
         - redis
@@ -102,7 +110,8 @@ services:
       dockerfile: Dockerfile
     environment: 
       - *AMQP_URL
-      - REDIS_URL=redis://redis:6379
+      - *BatchSize
+      - *RedisUrl
     depends_on: 
       - mqtt 
       - redis

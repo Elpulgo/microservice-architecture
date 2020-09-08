@@ -77,7 +77,8 @@ pub fn set_hash_all(key: String, batches: &Vec<Batch>) -> RedisResult<()> {
 }
 
 fn connect() -> RedisResult<Connection> {
-    let url = env::var("REDIS_URL").unwrap();
+    let host_and_port = env::var("REDIS_URL").unwrap();
+    let url = format!("redis://{}", host_and_port);
     try_connect(url.as_ref())
 }
 
