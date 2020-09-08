@@ -3,30 +3,64 @@ pub mod mqtt_consumer;
 pub mod mqtt_message;
 pub mod mqtt_publisher;
 pub mod redis_manager;
+pub mod variables;
 
 use amiquip::{Connection, Result};
-use std::{env, thread};
+use std::thread;
+
+const FORWARD_ROUNDTRIP_EXCHANGE_NAME: &str = "exchange_forward_roundtrip";
+const FORWARD_ROUNDTRIP_QUEUE_NAME: &str = "forward_roundtrip";
+const BATCH_EXCHANGE_NAME: &str = "exchange_batch_reply";
+const BATCH_QUEUE_NAME: &str = "batch_reply";
 
 fn main() -> Result<()> {
-    // Read amqp url from docker env
-    let amqp_url = env::var("AMQP_URL").unwrap();
-
-    let mut connection: Connection = match mqtt_consumer::try_connect(amqp_url) {
-        Ok(con) => con,
-        Err(err) => return Result::Err(err),
-    };
+    let mut connection: Connection =
+        match mqtt_consumer::try_connect(variables::get_amqp_connection()) {
+            Ok(con) => con,
+            Err(err) => return Result::Err(err),
+        };
 
     // Open a channel - None says let the library choose the channel ID.
-    let channel_roundtrip = connection.open_channel(None)?;
-    let channel_forward_roundtrip = connection.open_channel(None)?;
-    let channel_batch = connection.open_channel(None)?;
-    let channel_batch_reply = connection.open_channel(None)?;
+    let channel_roundtrip = match connection.open_channel(None) {
+        Ok(channel) => channel,
+        Err(err) => panic!("Failed to open roundtrip channel {}!", err),
+    };
 
-    let roundtrip_thread = thread::spawn(move || {
+    let channel_forward_roundtrip = match connection.open_channel(None) {
+        Ok(channel) => channel,
+        Err(err) => panic!("Failed to open forward roundtrip channel {}!", err),
+    };
+
+    let channel_batch = match connection.open_channel(None) {
+        Ok(channel) => channel,
+        Err(err) => panic!("Failed to open batch channel {}!", err),
+    };
+
+    let channel_batch_reply = match connection.open_channel(None) {
+        Ok(channel) => channel,
+        Err(err) => panic!("Failed to open batch reply channel {}!", err),
+    };
+
+    let roundtrip_thread = create_roundtrip_thread(channel_roundtrip, channel_forward_roundtrip);
+    let batch_thread = create_batch_thread(channel_batch, channel_batch_reply);
+
+    roundtrip_thread.join().unwrap();
+    batch_thread.join().unwrap();
+
+    println!("Service will exit, consumers are done!");
+
+    return Ok(());
+}
+
+fn create_roundtrip_thread(
+    channel_roundtrip: amiquip::Channel,
+    channel_forward_roundtrip: amiquip::Channel,
+) -> thread::JoinHandle<()> {
+    return thread::spawn(move || {
         let exchange_forward = match mqtt_publisher::bind_exchange_queue(
             &channel_forward_roundtrip,
-            "exchange_forward_roundtrip",
-            "forward_roundtrip",
+            FORWARD_ROUNDTRIP_EXCHANGE_NAME,
+            FORWARD_ROUNDTRIP_QUEUE_NAME,
         ) {
             Ok(exchange) => exchange,
             Err(err) => {
@@ -48,12 +82,17 @@ fn main() -> Result<()> {
             }
         }
     });
+}
 
-    let batch_thread = thread::spawn(move || {
+fn create_batch_thread(
+    channel_batch: amiquip::Channel,
+    channel_batch_reply: amiquip::Channel,
+) -> thread::JoinHandle<()> {
+    return thread::spawn(move || {
         let exchange_batch_reply = match mqtt_publisher::bind_exchange_queue(
             &channel_batch_reply,
-            "exchange_batch_reply",
-            "batch_reply",
+            BATCH_EXCHANGE_NAME,
+            BATCH_QUEUE_NAME,
         ) {
             Ok(exchange) => exchange,
             Err(err) => {
@@ -73,63 +112,4 @@ fn main() -> Result<()> {
             }
         }
     });
-
-    roundtrip_thread.join().unwrap();
-    batch_thread.join().unwrap();
-
-    println!("Service will exit, consumers are done!");
-
-    return Ok(());
 }
-
-// fn test() -> Result<()> {
-//     // FOR DEBUG
-//     env::set_var("REDIS_URL", "redis://localhost:6379");
-//     env::set_var("AMQP_URL", "amqp://guest:guest@localhost:5672");
-//     // END DEBUG
-
-//     let amqp_url = env::var("AMQP_URL").unwrap();
-
-//     let mut connection: Connection = match mqtt_consumer::try_connect(amqp_url) {
-//         Ok(con) => con,
-//         Err(err) => return Result::Err(err),
-//     };
-//     let channel_batch_reply = connection.open_channel(None)?;
-
-//     let exchange_batch_reply = match mqtt_publisher::bind_exchange_queue(
-//         &channel_batch_reply,
-//         "exchange_batch_reply",
-//         "batch_reply",
-//     ) {
-//         Ok(exchange) => exchange,
-//         Err(err) => {
-//             panic!(
-//                 "Failed to bind batch_reply publish exchange to queue: {:?}",
-//                 err
-//             );
-//         }
-//     };
-
-//     let mut batch_processor = batch_processor::BatchProcessor::new();
-
-//     for i in 1..11 {
-//         let batch = Batch {
-//             hash_key: String::from("hash_key_1"),
-//             key: format!("key_{}", i),
-//             value: format!("value_{}", i),
-//             is_last_in_batch: i == 10,
-//             batch_size: 10,
-//         };
-
-//         batch_processor.add_batch(batch, &exchange_batch_reply);
-
-//         // println!("\n########################");
-//         // batch_processor.print();
-//         // println!("\n########################");
-
-//         // thread::sleep(std::time::Duration::from_secs(2));
-//     }
-
-//     batch_processor.print();
-//     return Ok(());
-// }

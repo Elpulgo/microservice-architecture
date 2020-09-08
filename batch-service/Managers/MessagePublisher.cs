@@ -150,7 +150,6 @@ namespace batch_webservice
                     hashKey: batchKey,
                     key: $"{batchKey}_key_{index}",
                     value: $"{batchKey}_value_{index}",
-                    batchSize: BatchSize,
                     isLastInBatch: index == BatchSize
                 )
                 .ToByteArray();

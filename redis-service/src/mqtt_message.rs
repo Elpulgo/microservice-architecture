@@ -13,7 +13,6 @@ pub struct Batch {
     pub hash_key: String,
     pub key: String,
     pub value: String,
-    pub batch_size: usize,
     pub is_last_in_batch: bool,
 }
 

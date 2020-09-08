@@ -1,7 +1,7 @@
 use crate::mqtt_message::{Batch, KeyValue};
+use crate::variables;
 use redis::{self, Client, Connection, RedisResult};
 use std::cell::RefCell;
-use std::env;
 use std::{thread, thread_local, time};
 
 const MAX_CONNECTION_TRIES: i32 = 20;
@@ -77,18 +77,12 @@ pub fn set_hash_all(key: String, batches: &Vec<Batch>) -> RedisResult<()> {
 }
 
 fn connect() -> RedisResult<Connection> {
-    let host_and_port = env::var("REDIS_URL").unwrap();
-    let url = format!("redis://{}", host_and_port);
-    try_connect(url.as_ref())
-}
-
-fn try_connect(redis_url: &str) -> RedisResult<Connection> {
     let mut connection_retries = 0;
 
     // Open connection.
     loop {
         connection_retries = connection_retries + 1;
-        let client = match Client::open(redis_url) {
+        let client = match Client::open(variables::get_redis_connection()) {
             Ok(con) => con,
             Err(err) => {
                 println!(
