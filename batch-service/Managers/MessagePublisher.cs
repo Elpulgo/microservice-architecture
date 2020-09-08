@@ -24,7 +24,7 @@ namespace batch_webservice
 
         private IConfiguration Configuration { get; }
 
-        private int BatchSize => int.Parse(Configuration["BATCH_SIZE"]);
+        private int BatchSize => int.Parse(Configuration["BatchSize"]);
 
         private ConcurrentDictionary<Guid, BatchStatus> m_BatchReplyMap;
 
@@ -35,11 +35,11 @@ namespace batch_webservice
             IMessageConsumer messageConsumer)
         {
             Configuration = configuration;
+            m_RabbitMQClient = rabbitMQClient;
+            m_Channel = m_RabbitMQClient.SetupMQTTBindings(MqttBinding);
             m_BatchReplyMap = new ConcurrentDictionary<Guid, BatchStatus>();
             m_PolicyManager = policyManager;
-            m_RabbitMQClient = rabbitMQClient;
             m_MessageConsumer = messageConsumer;
-            m_Channel = m_RabbitMQClient.SetupMQTTBindings(MqttBinding);
             m_MessageConsumer.BatchReplyEventChanged += OnBatchReplyChanged;
         }
 
