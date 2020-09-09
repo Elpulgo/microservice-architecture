@@ -8,6 +8,7 @@ An example of microservice architecture in docker containers
 
 ## Architecture
 
+<img src="https://github.com/Elpulgo/microservice-architecture/blob/master/screens/microservice-architecture.png" width="640">
 
 ## Flow
  - **Roundtrip**
