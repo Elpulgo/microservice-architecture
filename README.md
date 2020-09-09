@@ -1,5 +1,6 @@
 # Microservice-architecture
-An example of microservice architecture in docker containers
+An example of microservice architecture in docker containers.
+Use **docker-compose.production.yml** to test it out. Images are available at **https://hub.docker.com/u/elpulgo**.
 
 ## Scenarios
 
