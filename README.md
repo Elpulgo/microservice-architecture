@@ -11,25 +11,25 @@ An example of microservice architecture in docker containers
 
 ## Flow
  - **Roundtrip**
-    1. Send a key/value from client via HTTP
-    2. Receive key/value in roundtrip-service and publish to MQTT broker (queue *event*)
-    3. Consume key/value in redis-service from queue *event*
-    4. Persist key/value in Redis from redis-service
-    5. Publish key/value to MQTT broker (queue *forward_roundtrip*)
-    6. Consume key/value in websocket-service from queue *forward_roundtrip*
-    7. Fire key/value via websocket
-    8. Receive key/value in client via websocket
+    - Send a key/value from client via HTTP
+    - Receive key/value in roundtrip-service and publish to MQTT broker (queue *event*)
+    - Consume key/value in redis-service from queue *event*
+    - Persist key/value in Redis from redis-service
+    - Publish key/value to MQTT broker (queue *forward_roundtrip*)
+    - Consume key/value in websocket-service from queue *forward_roundtrip*
+    - Fire key/value via websocket
+    - Receive key/value in client via websocket
 - **Batch**
-    1. Send a batch command from client via HTTP
-    2. Receive batch command in batch-service, create batch and publish as multiple single messages to
+    - Send a batch command from client via HTTP
+    - Receive batch command in batch-service, create batch and publish as multiple single messages to
     to MQTT broker (queue *batch*)
-    3. Wait for reply on separate MQTT channel in queue *batch_reply*. Return bad request if timeout limit is exceeded.
-    4. Consume batches in redis-service from queue *batch*
-    5. Once the last message in the batch arrives, store batch in Redis as hashset
-    6. Publish batchstatus to queue *batch_reply*, Done if all succeded, otherwise failure reason
-    7. Return reply from batch-service once it arrives (checking against batch-key)
-    8. Return status from HTTP to client
-    9. Show response from batch-service in client, and reload stored batches
+    - Wait for reply on separate MQTT channel in queue *batch_reply*. Return bad request if timeout limit is exceeded.
+    - Consume batches in redis-service from queue *batch*
+    - Once the last message in the batch arrives, store batch in Redis as hashset
+    - Publish batchstatus to queue *batch_reply*, Done if all succeded, otherwise failure reason
+    - Return reply from batch-service once it arrives (checking against batch-key)
+    - Return status from HTTP to client
+    - Show response from batch-service in client, and reload stored batches
 
 ## Technologies / services
 
