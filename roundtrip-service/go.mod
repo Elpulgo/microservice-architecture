@@ -1,6 +1,6 @@
 module webservice
 
-go 1.23.0
+go 1.24.0
 
 require (
 	github.com/elpulgo/microservice-architecture/shared/go-shared v0.0.0-20200907182036-0c1d7445f07f
@@ -21,7 +21,7 @@ require (
 	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.1.2 // indirect
-	golang.org/x/crypto v0.36.0 // indirect
-	golang.org/x/net v0.38.0 // indirect
-	golang.org/x/sys v0.31.0 // indirect
+	golang.org/x/crypto v0.45.0 // indirect
+	golang.org/x/net v0.47.0 // indirect
+	golang.org/x/sys v0.38.0 // indirect
 )
